@@ -419,7 +419,7 @@ h2 i {
         /* grid-template-columns: repeat(3, 1fr); */
     }
     .summary-card.chart-card {
-       grid-column: span 2; /* Faire prendre 2 colonnes à la carte graphique */
+       grid-column: span 3; /* Faire prendre 2 colonnes à la carte graphique */
        /* Ou grid-column: 1 / -1; /* Prendre toute la largeur */
     }
  }
