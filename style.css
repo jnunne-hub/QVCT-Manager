@@ -5,24 +5,36 @@
 
 /* --- Variables et Styles de Base --- */
 :root {
-    --primary-color: #4a90e2;
-    --secondary-color: #50e3c2;
-    --accent-color: #f5a623;
-    --background-color: #f4f7f6;
-    --sidebar-bg: #ffffff;
-    --text-color: #333;
-    --text-light: #f8f8f8;
-    --border-color: #e0e0e0;
-    --shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    --card-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    --hover-light: #f0f0f0;
-    --danger-color: #dc3545;
-    --success-color: #28a745;
-    --warning-color: #f5a623;
-    --info-color: #17a2b8; /* Changé pour membres (était vert clair) */
-    --neutral-color: #909399;
-    --link-color: #6f42c1;
+    /* Palette Principale */
+    --primary-color: #6C9D7E; /* Vert sauge doux */
+    --secondary-color: #A8D8B9; /* Vert d'eau clair */
+    --accent-color: #F7C873; /* Ocre / Moutarde doux */
+    --background-color: #F9F9F9; /* Blanc cassé / Très léger gris */
+    --sidebar-bg: #FFFFFF; /* Blanc pur */
+    --text-color: #4A4A4A; /* Gris anthracite foncé */
+    --text-light: #FFFFFF;
+    --text-muted: #88939E; /* Gris clair pour textes secondaires */
+    --border-color: #EAEAEA; /* Gris clair bordures */
+    --hover-light: #F0F4F1; /* Survol sidebar/listes */
+
+    /* Ombres Douces */
+    --shadow-color-soft: rgba(108, 157, 126, 0.08); /* Ombre verte très douce */
+    --shadow: 0 3px 8px var(--shadow-color-soft);
+    --card-shadow: 0 5px 15px var(--shadow-color-soft);
+    --card-hover-shadow: 0 10px 25px rgba(108, 157, 126, 0.12); /* Ombre survol plus marquée */
+
+    /* Couleurs Status / Alertes (Subtiles) */
+    --danger-color: #E87E7E; /* Rouge corail doux */
+    --success-color: #87C7A1; /* Vert succès doux */
+    --warning-color: var(--accent-color);
+    --info-color: #88BBD6; /* Bleu ciel doux */
+    --neutral-color: #B0BEC5; /* Gris bleuté neutre */
+    --link-color: #7E8DCC; /* Bleu lavande doux */
+
+     /* Rayons de bordure */
+     --border-radius-small: 6px;
+     --border-radius-medium: 10px;
+     --border-radius-large: 12px;
 }
 
 * {
