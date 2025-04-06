@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QVCT Manager - Membres</title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <!-- ====================================================== -->
+    <!-- IMPORTANT : SDK Firebase et Configuration              -->
+    <!-- Remplacez ce bloc par vos scripts SDK réels et        -->
+    <!-- votre objet de configuration firebaseConfig            -->
+    <!-- Obtenus depuis votre console Firebase                 -->
+    <!-- ====================================================== -->
+    <!-- Firebase SDK (Compat version pour syntaxe plus simple) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <script>
+      // COLLEZ VOTRE OBJET firebaseConfig ICI !
+      // Exemple (NE PAS UTILISER TEL QUEL) :
+    const firebaseConfig = {
+    apiKey: "AIzaSyBHKKxPs7QPBVceajWSHLma5XSxGpl_Q6w",
+    authDomain: "qvct-manager-app.firebaseapp.com",
+    projectId: "qvct-manager-app",
+    storageBucket: "qvct-manager-app.firebasestorage.app",
+    messagingSenderId: "349381960575",
+    appId: "1:349381960575:web:eed97ccbecd4cd77b3704a"
+  };
+
+      // Initialiser Firebase
+      // Vérifier si Firebase a déjà été initialisé (évite les erreurs de rechargement à chaud)
+      let db;
+      let auth;
+  
+      if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+          console.log("Firebase Initialized");
+      } else {
+          firebase.app(); // if already initialized, use that instance
+          console.log("Firebase App already exists");
+      }
+      // Obtenir l'instance Firestore
+      db = firebase.firestore();
+        auth = firebase.auth(); // <<< AJOUT >>> Initialiser Auth
+      console.log("Firestore Ready");
+
+    </script>
+     <!-- ====================================================== -->
+     <!-- FIN DU BLOC Firebase                                   -->
+     <!-- ====================================================== -->
+
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <h1><i class="fas fa-heartbeat"></i> QVCT Manager</h1>
+            <nav>
+                <ul>
+                    <!-- Liens de navigation (on active "Membres" par défaut ici) -->
+                    <li><a href="#dashboard" class="nav-link"><i class="fas fa-tachometer-alt"></i> Tableau de Bord</a></li>
+                    <li><a href="#animations" class="nav-link"><i class="fas fa-calendar-alt"></i> Animations</a></li>
+                    <li><a href="#tasks" class="nav-link"><i class="fas fa-tasks"></i> Tâches</a></li>
+                    <li><a href="#members" class="nav-link"><i class="fas fa-users"></i> Membres COPIL</a></li>
+                    <li><a href="#documents" class="nav-link"><i class="fas fa-folder-open"></i> Documents</a></li>
+                    <li><a href="#stats" class="nav-link"><i class="fas fa-chart-bar"></i> Statistiques</a></li>
+                    <li class="sidebar-logo-container"> <!-- Li pour garder structure ou simple Div -->
+                     <img src="img/logo-qvct.png" alt="Logo QVCT" id="sidebar-logo">
+                </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div id="user-info" style="margin-bottom: 15px; display: none;"> <!-- Caché par défaut -->
+                    <img id="user-photo" src="" alt="Photo" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">
+                    <span id="user-name" style="font-size: 0.9em; vertical-align: middle;"></span>
+                    <button id="logout-btn" class="btn danger-btn btn-small" style="margin-left: 10px; padding: 4px 8px; font-size: 0.8em;"><i class="fas fa-sign-out-alt"></i> Déco</button>
+                </div>
+                <button id="login-btn" class="btn primary-btn" style="width: 100%;"><i class="fab fa-google"></i> Se connecter avec Google</button>
+                <p style="margin-top: 15px;">© 2025 KONECTA QVCT CRM59</p> <!-- Copyright après les boutons -->
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Section Tableau de bord (Placeholder) -->
+            <section id="dashboard" class="page">
+                <h2><i class="fas fa-tachometer-alt"></i> Tableau de Bord</h2>
+                    <div class="dashboard-summary">
+                        <div class="summary-card">
+                            <h3><i class="fas fa-calendar-check"></i> Animations à venir</h3>
+                            <p id="upcoming-animations-count">...</p> <!-- Compteur -->
+                            <ul id="upcoming-animations-list">
+                                <li>Chargement...</li>
+                            </ul>
+                        </div>
+                        <div class="summary-card">
+                            <h3><i class="fas fa-tasks"></i> Tâches en cours</h3>
+                            <p id="ongoing-tasks-count">...</p> <!-- Compteur -->
+                            <ul id="ongoing-tasks-list">
+                                 <li>Chargement...</li>
+                            </ul>
+                        </div>
+                        <div class="summary-card">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Échéances Proches / En Retard<span id="overdue-tasks-badge" class="badge danger" style="display: none;"></span></h3>
+                            <ul id="deadlines-list">
+                                 <li>Chargement...</li>
+                            </ul>
+                            <!-- Alertes / Rappels -->
+                        </div>
+                    <!-- ========================== -->
+                    <!-- NOUVELLE CARTE : Budget    -->
+                    <!-- ========================== -->
+                    <div class="summary-card">
+                        <h3><i class="fas fa-coins"></i> Budget Planifié</h3>
+                        <p id="planned-budget-total">...</p> <!-- Le total calculé ira ici -->
+                        <p id="budget-details-info" class="dashboard-details-text">
+                            Chargement des détails...
+                        </p>
+                        <!-- Pas besoin de <ul> ici pour l'instant -->
+                    </div>
+                    <!-- ================================= -->
+                    <!-- NOUVELLE CARTE: Animations Récentes -->
+                    <!-- ================================= -->
+                    <div class="summary-card">
+                        <h3><i class="fas fa-history"></i> Animations Récentes</h3>
+                        <p id="recent-animations-count">...</p> <!-- Optionnel: Compteur total passées -->
+                        <ul id="recent-animations-list">
+                            <li>Chargement...</li>
+                        </ul>
+                    </div>
+                    <!-- NOUVELLE CARTE: Budget Mensuel    -->
+                        <!-- ================================= -->
+                        <div class="summary-card chart-card"> <!-- Ajout classe chart-card -->
+                            <h3><i class="fas fa-chart-line"></i> Budget Mensuel Planifié</h3>
+                            <div class="chart-container dashboard-chart-container"> <!-- Conteneur spécifique -->
+                                <canvas id="dashboard-budget-chart"></canvas>
+                            </div>
+                            <p id="dashboard-budget-error" class="chart-error-message" style="display:none; color: #999; font-size:0.8em; text-align:center; margin-top:10px;">Chargement...</p>
+                        </div>
+                        <!-- ================================= -->
+                    <!-- NOUVELLE CARTE: Budget Annuel Restant -->
+                    <!-- ================================= -->
+                    <div class="summary-card annual-budget-card"> <!-- Classe spécifique -->
+                        <h3><i class="fas fa-piggy-bank"></i> Budget Annuel Restant</h3>
+                        <p id="remaining-annual-budget">...</p> <!-- La valeur calculée ira ici -->
+                        <p id="remaining-budget-details" class="dashboard-details-text">
+                            Basé sur 200€/mois alloués YTD.
+                        </p>
+                    </div>
+                    </div>
+            </section>        
+            <!-- ============================ -->
+            <!-- Section Animations          -->
+            <!-- ============================ -->
+            <section id="animations" class="page">
+                <h2><i class="fas fa-calendar-alt"></i> Gestion des Animations</h2>
+                <button id="add-animation-btn" class="btn primary-btn"><i class="fas fa-plus"></i> Ajouter une Animation</button>
+                                <div class="filter-container" style="margin-bottom: 20px;"> <!-- Ajuster marge si besoin -->
+                         <!-- Filtre de Vue (Nouveau) -->
+                         <label for="animation-view-filter" style="margin-right: 5px; font-weight: bold;">Afficher:</label>
+                         <select id="animation-view-filter">
+                             <option value="active" selected>Vue Active</option> <!-- Défaut -->
+                             <option value="archived">Archives</option>
+                             <option value="all">Toutes les Vues</option>
+                         </select>
+
+                         <!-- Filtre par Statut (Existant) -->
+                         <label for="animation-status-filter" style="margin-left: 15px; margin-right: 5px; font-weight: bold;">Filtrer par statut </label>
+                         <select id="animation-status-filter">
+                             <option value="all">Tous</option>
+                             <option value="prévue">Prévue</option>
+                             <option value="en cours">En cours</option>
+                             <option value="réalisée">Réalisée</option>
+                             <option value="annulée">Annulée</option>
+                         </select>
+                     </div>
+                
+                <div id="animation-list" class="list-container animation-grid"> <!-- Ajout de la classe animation-grid -->
+                    <!-- La liste des animations sera chargée ici par le script -->
+                    <p>Chargement des animations...</p>
+                </div>
+
+                <!-- Modale/Formulaire pour ajouter/modifier une animation -->
+                <div id="animation-form-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn">×</span>
+                        <h3 id="animation-form-title">Ajouter une Animation</h3>
+                        <form id="animation-form">
+                            <input type="hidden" id="animation-id">
+
+                            <label for="animation-title">Titre / Thème:</label>
+                            <input type="text" id="animation-title" required>
+
+                            <label for="animation-description">Description:</label>
+                            <textarea id="animation-description"></textarea>
+
+                            <label for="animation-date">Date / Heure:</label>
+                            <input type="datetime-local" id="animation-date" required>
+
+                            <label for="animation-location">Lieu:</label>
+                            <input type="text" id="animation-location">
+
+                            <label>Participants (Membres COPIL):</label>
+                            <div id="animation-participants-list" class="checkbox-list">
+                                <p>Chargement des membres...</p>
+                            </div>
+
+                            <label for="animation-status">Statut:</label>
+                            <select id="animation-status">
+                                <option value="prévue">Prévue</option>
+                                <option value="en cours">En cours</option>
+                                <option value="réalisée">Réalisée</option>
+                                <option value="annulée">Annulée</option>
+                            </select>
+
+                            <label for="animation-type">Type d'Animation:</label>
+                            <select id="animation-type" required>
+                                <option value="">-- Choisir un type --</option>
+                                <option value="Atelier">Atelier</option>
+                                <option value="Événement">Événement</option>
+                                <option value="Événement">Atlier discution</option>
+                                <option value="Conférence">Conférence</option>
+                                <option value="Sensibilisation">Sensibilisation</option>
+                                <option value="Réunion">Réunion</option>
+                                <option value="Formation">Formation</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                            
+                            <!-- ================== -->
+                            <!-- NOUVEAU CHAMP BUDGET -->
+                            <!-- ================== -->
+                            <label for="animation-budget">Budget prévisionnel (€):</label>
+                            <input type="number" id="animation-budget" min="0" step="1" placeholder="Ex: 500">
+                            <!-- ================== -->
+
+                            <label for="animation-docs">Documents associés (coller les liens ici, 1 par ligne):</label>
+                            <textarea id="animation-docs" placeholder="Ex: https://docs.google.com/document/d/...\nhttps://drive.google.com/file/d/..."></textarea>
+
+                            <button type="submit" class="btn success-btn">Enregistrer</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- ======================================= -->
+                <!-- NOUVELLE MODALE : Liste des Tâches par Animation -->
+                    <!-- ======================================= -->
+                <div id="task-list-modal" class="modal">
+                    <div class="modal-content modal-lg"> <!-- Ajout classe modal-lg pour potentiellement plus large -->
+                        <span class="close-btn">×</span>
+                        <h3 id="modal-task-title">Tâches pour l'animation : ...</h3>
+                        <div id="modal-task-content" class="modal-task-list-container">
+                            <!-- Les tâches seront chargées ici par le script -->
+                            <p>Chargement des tâches associées...</p>
+                        </div>
+                    </div>
+                </div>
+                 <!-- ======================================= -->
+
+            </section>
+
+
+            <!-- ========================= -->
+            <!-- Section Tâches           -->
+            <!-- ========================= -->
+            <section id="tasks" class="page">
+                 <h2><i class="fas fa-tasks"></i> Suivi des Tâches</h2>
+
+                 <!-- Filtre par animation -->
+                 <div class="filter-container" style="margin-bottom: 20px;">
+                     <label for="task-filter-animation" style="margin-right: 10px; font-weight: bold;">Filtrer par animation:</label>
+                     <select id="task-filter-animation">
+                         <option value="all">Toutes les animations</option>
+                         <!-- Options chargées dynamiquement -->
+                     </select>
+                 </div>
+
+                 <button id="add-task-btn" class="btn primary-btn"><i class="fas fa-plus"></i> Ajouter une Tâche</button>
+
+                 <!-- Grille pour les tâches -->
+                 <div id="task-list" class="list-container task-grid">
+                     <!-- Les cartes de tâches seront chargées ici -->
+                     <p>Chargement des tâches...</p>
+                 </div>
+
+                 <!-- Modale/Formulaire pour ajouter/modifier une tâche -->
+                <div id="task-form-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn">×</span>
+                        <h3 id="task-form-title">Ajouter une Tâche</h3>
+                        <form id="task-form">
+                             <input type="hidden" id="task-id">
+
+                             <label for="task-description">Description de la tâche:</label>
+                             <input type="text" id="task-description" required>
+
+                             <label for="task-animation">Liée à l'animation:</label>
+                             <select id="task-animation" required>
+                                 <option value="">-- Choisir une animation --</option>
+                                 <!-- Options chargées dynamiquement -->
+                             </select>
+
+                             <label>Assignée à:</label> <!-- Plus besoin de 'for' ici -->
+                             <div id="task-assignees-list" class="checkbox-list"> <!-- NOUVEAU DIV -->
+                                 <p>Chargement des membres...</p>
+                                 <!-- Les checkboxes seront chargées ici par JS -->
+                             </div>
+
+                             <label for="task-due-date">Échéance (optionnel):</label>
+                             <input type="date" id="task-due-date">
+
+                             <label for="task-status">Statut:</label>
+                             <select id="task-status">
+                                 <option value="à faire">À faire</option>
+                                 <option value="en cours">En cours</option>
+                                 <option value="terminé">Terminé</option>
+                             </select>
+
+                             <button type="submit" class="btn success-btn">Enregistrer</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============== -->
+            <!-- Section Membres -->
+            <!-- =============== -->
+            <section id="members" class="page">
+                <h2><i class="fas fa-users"></i> Membres du COPIL</h2>
+                <button id="add-member-btn" class="btn primary-btn"><i class="fas fa-user-plus"></i> Ajouter un Membre</button>
+                <div id="member-list" class="list-container member-grid"> <!-- Ajout de la classe member-grid -->
+                    <!-- La liste des membres sera chargée ici par le script -->
+                    <p>Chargement des membres...</p>
+                </div>
+
+                <!-- Modale/Formulaire pour ajouter/modifier un membre -->
+                <div id="member-form-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-btn">×</span>
+                        <h3 id="member-form-title">Ajouter un Membre</h3>
+                        <form id="member-form">
+                            <!-- Champ caché pour stocker l'ID lors de la modification -->
+                            <input type="hidden" id="member-id">
+
+                            <label for="member-firstname">Prénom:</label>
+                            <input type="text" id="member-firstname" required>
+
+                            <label for="member-lastname">Nom:</label>
+                            <input type="text" id="member-lastname" required>
+
+                            <label for="member-role">Rôle:</label>
+                            <input type="text" id="member-role" placeholder="Ex: Pilote, Participant, RH...">
+
+                            <label for="member-contact">Contact (Email):</label>
+                            <input type="email" id="member-contact">
+
+                            <button type="submit" class="btn success-btn">Enregistrer</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Section Documents (Placeholder) -->
+            <section id="documents" class="page">
+                <h2><i class="fas fa-folder-open"></i> Documents et Ressources</h2>
+                <p>Gestion des documents à venir...</p>
+            </section>
+
+              <!-- ========================== -->
+             <!-- Section Stats              -->
+             <!-- ========================== -->
+            <section id="stats" class="page">
+                 <h2><i class="fas fa-chart-bar"></i> Statistiques et Bilan</h2>
+
+                 <!-- Indicateurs Clés -->
+                 <div class="stats-container dashboard-summary"> <!-- Réutilisation style dashboard -->
+                     <div class="stat-card summary-card"> <!-- Réutilisation style dashboard -->
+                         <h3><i class="fas fa-calendar-check"></i> Animations Réalisées</h3>
+                         <p id="stats-total-completed">...</p>
+                         <span class="dashboard-details-text">(Total sur la période)</span>
+                     </div>
+                     <div class="stat-card summary-card">
+                         <h3><i class="fas fa-users-cog"></i> Taux Participation Moyen</h3>
+                         <p id="stats-avg-participation">...</p>
+                          <span class="dashboard-details-text">(Sur animations réalisées)</span>
+                     </div>
+                     <div class="stat-card summary-card">
+                         <h3><i class="fas fa-euro-sign"></i> Budget Total Engagé</h3>
+                         <p id="stats-total-budget-spent">...</p>
+                         <span class="dashboard-details-text">(Sur animations réalisées)</span>
+                     </div>
+                 </div>
+
+                 <!-- Détails / Répartitions -->
+                 <div class="stats-details-container" style="margin-top: 30px;">
+
+                     <!-- Graphique Répartition par Statut -->
+                     <div class="stat-chart-block"> <!-- <<< MODIFICATION >>> classe + contenu -->
+                         <h4><i class="fas fa-tasks"></i> Répartition par Statut</h4>
+                         <div class="chart-container"> <!-- Conteneur pour taille -->
+                            <canvas id="stats-status-chart"></canvas>
+                         </div>
+                         <p id="stats-status-error" class="chart-error-message" style="display:none; color:red; text-align:center; margin-top:10px;"></p> <!-- Pour erreurs -->
+                     </div>
+
+                    <!-- Graphique Répartition par Type -->
+                     <div class="stat-chart-block"> <!-- <<< MODIFICATION >>> classe + contenu -->
+                         <h4><i class="fas fa-tags"></i> Répartition par Type</h4>
+                          <div class="chart-container">
+                             <canvas id="stats-type-chart"></canvas>
+                          </div>
+                          <p id="stats-type-error" class="chart-error-message" style="display:none; color:red; text-align:center; margin-top:10px;"></p>
+                     </div>
+
+                      <!-- Graphique Participation par Membre -->
+                     <div class="stat-chart-block full-width"> <!-- <<< MODIFICATION >>> classe + contenu + full-width -->
+                         <h4><i class="fas fa-user-check"></i> Participation par Membre (sur anim. réalisées)</h4>
+                         <div class="chart-container large"> <!-- Conteneur plus grand -->
+                            <canvas id="stats-participation-chart"></canvas>
+                         </div>
+                         <p id="stats-participation-error" class="chart-error-message" style="display:none; color:red; text-align:center; margin-top:10px;"></p>
+                     </div>
+
+                 </div>
+
+                 <!-- Export -->
+                  <div class="export-buttons" style="margin-top: 30px; text-align: center;">
+                      <button id="export-csv-btn" class="btn secondary-btn"><i class="fas fa-file-csv"></i> Exporter Bilan (CSV)</button>
+                      <!-- <button id="export-pdf-btn" class="btn secondary-btn" disabled title="Fonctionnalité future"><i class="fas fa-file-pdf"></i> Exporter Bilan (PDF)</button> -->
+                  </div>
+
+            </section>
+            <!-- ========================== -->
+
+
+        </main>
+    </div>
+
+    <!-- Notre script principal, chargé APRÈS l'initialisation de Firebase -->
+    <script src="script.js"></script>
+</body>
+</html>
