@@ -5,7 +5,7 @@
 
 /* --- Variables et Styles de Base --- */
 :root {
-    /* Palette Principale */
+   /* Palette Principale */
     --primary-color: #6C9D7E; /* Vert sauge doux */
     --secondary-color: #A8D8B9; /* Vert d'eau clair */
     --accent-color: #F7C873; /* Ocre / Moutarde doux */
@@ -423,6 +423,40 @@ h2 i {
        /* Ou grid-column: 1 / -1; /* Prendre toute la largeur */
     }
  }
+.calendar-wrapper {
+    /* Garder les styles existants (padding, background, etc.) */
+    margin-top: 0; /* Plus besoin de marge haute si dans la grille */
+    background-color: #fff;
+    padding: 25px;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+}
+
+/* >>> NOUVELLE RÈGLE POUR ÉTENDRE L'ÉLÉMENT DANS LA GRILLE <<< */
+.dashboard-summary > .grid-full-width {
+    grid-column: 1 / -1; /* S'étend de la 1ère à la dernière colonne */
+}
+
+/* Styles existants pour le titre et le conteneur interne du calendrier */
+.calendar-wrapper h3 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+.calendar-wrapper h3 i {
+    margin-right: 10px;
+    opacity: 0.85;
+}
+
+#dashboard-calendar {
+    min-height: 450px; /* Garder une hauteur minimale */
+    width: 100%;      /* Doit prendre la largeur de son parent .calendar-wrapper */
+    max-width: none; /* Assurer qu'il n'y a pas de limite max */
+    margin: 0;       /* Pas de marge auto */
+}
 /* --- Boutons --- */
 .btn {
     padding: 10px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95em;
