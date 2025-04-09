@@ -53,9 +53,15 @@
         const animationDetailContent = document.getElementById('animation-detail-content');
         const detailModalTitle = document.getElementById('detail-modal-title');
         const editFromDetailBtn = document.getElementById('edit-from-detail-btn');
+
+        const hamburgerBtn = document.querySelector('.hamburger-btn');
+    const sidebar = document.querySelector('.sidebar'); // Vous l'avez peut-être déjà sélectionné ? Sinon, ajoutez-le.
+    const overlay = document.querySelector('.overlay');
+    const body = document.body; // Vous pouvez aussi utiliser document.body directement dans la fonction si vous préférez
+
+        console.log('Vérification éléments:', { hamburgerBtn, sidebar, overlay, body });
         // --- Fin Références DOM ---
-    
-    
+     
         // --- 3. Variables d'État, Cache et Instances ---
         let editingMemberId = null; let editingAnimationId = null; let editingTaskId = null;
         let isInitialLoadComplete = false;
@@ -72,6 +78,10 @@
         const closeModal = (modal) => { if (!modal) return; modal.style.display = 'none'; if (modal === memberModal && memberForm) { memberForm.reset(); editingMemberId = null; if(memberFormTitle) memberFormTitle.textContent="Ajouter Membre"; if(hiddenMemberIdInput) hiddenMemberIdInput.value=''; } else if (modal === animationModal && animationForm) { animationForm.reset(); editingAnimationId = null; if(animationFormTitle) animationFormTitle.textContent="Ajouter Animation"; if(hiddenAnimationIdInput) hiddenAnimationIdInput.value=''; if(animationParticipantsDiv) animationParticipantsDiv.innerHTML='<p>Chargement...</p>'; } else if (modal === taskModal && taskForm) { taskForm.reset(); editingTaskId = null; if(taskFormTitle) taskFormTitle.textContent="Ajouter Tâche"; if(hiddenTaskIdInput) hiddenTaskIdInput.value=''; if(taskAnimationSelect) taskAnimationSelect.value=""; if(taskAssigneesDiv) taskAssigneesDiv.innerHTML='<p>Chargement...</p>'; } else if (modal === taskListModal) { if(modalTaskTitle) modalTaskTitle.textContent="Tâches"; if(modalTaskContent) modalTaskContent.innerHTML='<p>Chargement...</p>'; } else if (modal === animationDetailModal) { if(animationDetailContent) animationDetailContent.innerHTML='<p>Chargement...</p>'; currentDetailAnimationId = null;} }; // <<< Ajout nettoyage modale détail
         const escapeCsvValue = (value) => { const stringValue = String(value === null || value === undefined ? '' : value); if (stringValue.includes(';') || stringValue.includes('"') || stringValue.includes('\n')) { return `"${stringValue.replace(/"/g, '""')}"`; } return stringValue; };
         const animateCardEntry = (cardElement, delay) => { if (!cardElement) return; requestAnimationFrame(() => { requestAnimationFrame(() => { cardElement.style.transitionDelay = `${delay}ms`; cardElement.classList.remove('card-hidden'); cardElement.addEventListener('transitionend', () => { cardElement.style.transitionDelay = ''; }, { once: true }); }); }); };
+
+        const toggleSidebar = () => {
+        body.classList.toggle('sidebar-open');
+    };
         // --- Fin Utilitaires ---
     
     
@@ -284,6 +294,44 @@
             if (exportCsvBtn) { exportCsvBtn.addEventListener('click', handleExportCsvStats); } else { console.warn("#export-csv-btn manquant."); }
             if (loginBtn) { loginBtn.addEventListener('click', signInWithGoogle); } else { console.warn("#login-btn manquant"); }
             if (logoutBtn) { logoutBtn.addEventListener('click', signOut); } else { console.warn("#logout-btn manquant"); }
+
+            // <<< AJOUTEZ LES ÉCOUTEURS D'ÉVÉNEMENTS POUR LE HAMBURGER ICI >>>
+        console.log('Préparation attachement listeners hamburger...');
+            if (hamburgerBtn && sidebar && overlay) {
+            hamburgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Empêche la propagation de l'événement
+                toggleSidebar();
+            });
+console.log('Condition IF passée, attachement listeners...');
+            overlay.addEventListener('click', () => {
+                console.log('Overlay cliqué !');
+                // Ferme seulement si le sidebar est ouvert
+                if (body.classList.contains('sidebar-open')) {
+                            console.log('Sidebar était ouvert, tentative de fermeture...'); // <-- AJOUTER CECI
+
+                    toggleSidebar();
+               } else {
+        console.log('Sidebar était déjà fermé.'); // <-- AJOUTER CECI
+    }
+            });
+
+            // Optionnel : Ferme le menu quand on clique sur un lien de navigation
+            const sidebarNavLinksForToggle = sidebar.querySelectorAll('.nav-link');
+            sidebarNavLinksForToggle.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (body.classList.contains('sidebar-open')) {
+                        // Utilise setTimeout pour laisser le temps à la navigation de se faire
+                        // avant que le menu ne se ferme visuellement.
+                        setTimeout(toggleSidebar, 100);
+                    }
+                });
+            });
+
+        } else {
+            console.warn("Éléments hamburgerBtn, sidebar, ou overlay non trouvés. Le menu mobile risque de ne pas fonctionner.");
+        }
+        // --- Fin Listeners Hamburger ---
+
         } catch (err) { console.error("Erreur attachement listeners:", err); }
         // --- Fin Listeners ---
     
