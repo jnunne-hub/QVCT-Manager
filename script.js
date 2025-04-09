@@ -15,16 +15,7 @@
      * - Clic calendrier ouvre Modale Détail (avec bouton Modifier).
      */
     'use strict';
-    document.addEventListener('DOMContentLoaded', () => {
-    const menuToggle = document.querySelector('.menu-toggle');
-    const sidebar = document.querySelector('.sidebar');
-
-    if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-        });
-    }
-});
+    
     document.addEventListener('DOMContentLoaded', () => {
     
         // --- 1. Vérification des Dépendances Essentielles ---
