@@ -51,115 +51,157 @@ body {
     display: flex;
     height: 100vh;
     overflow: hidden;
+    margin: 0; /* Assurez-vous que body n'a pas de marge */
 }
 
 .app-container {
     display: flex;
+    flex-direction: column; /* Changé pour colonne afin d'inclure le footer */
     width: 100%;
     height: 100%;
 }
 
-/* --- Barre Latérale (Sidebar) --- */
-..sidebar {
-        position: fixed;
-        top: 0;
-        left: -250px;  /* Masqué hors de l'écran */
-        width: 250px;
-        height: 100%;
-        background: var(--sidebar-bg); /* Garde la couleur de fond */
-        transition: left 0.3s ease;
-        z-index: 1000;
-    }
-    .sidebar.active {
-        left: 0; /* La sidebar apparaît */
-    }
-    .menu-toggle {
-        display: block;
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background-color: var(--primary-color);
-        color: #fff;
-        border: none;
-        padding: 10px;
-        z-index: 1001;
-        cursor: pointer;
-        border-radius: 4px;
-    }
-.sidebar h1 {
-    font-size: 1.5em;
-    color: var(--primary-color);
-    margin-bottom: 30px;
+/* Supprimez tous les styles relatifs à .sidebar et ses enfants */
+/* Par exemple, supprimez : .sidebar, .sidebar h1, .sidebar nav ul, etc. */
+
+/* Nouveaux styles pour le header */
+/* --- Main Header --- */
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 10px 20px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1100;
+}
+
+/* Header Left : Logo et Titre */
+.header-left {
+  display: flex;
+  align-items: center;
+}
+.header-left .logo {
+  width: 40px;
+  height: auto;
+}
+.header-left .title {
+  margin-left: 10px;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+/* Header Center : Menu Icônes */
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+.menu-icons {
+  list-style: none;
+  display: inline-flex;
+  gap: 20px;
+}
+.menu-icons li a {
+  color: #fff;
+  font-size: 1.3em;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+.menu-icons li a:hover {
+  color: var(--accent-color);
+}
+
+/* Header Right : Bouton Connexion */
+.header-right {
+  display: flex;
+  align-items: center;
+}
+.header-right .btn {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-small);
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s ease;
+}
+.header-right .btn:hover {
+  background-color: #3a80d2;
+}
+
+/* --- Sub-header (Barre avec le Footer) --- */
+.sub-header {
+  background-color: var(--secondary-color);
+  text-align: center;
+  padding: 5px 10px;
+  margin-top: 60px;  /* Pour se placer en dessous du header fixe */
+  font-size: 0.9em;
+  color: var(--text-color);
+    width:100px;
+}
+
+/* Ajustement du main-content pour le header fixe */
+.main-content.with-header {
+    padding: 100px 30px 30px 30px; /* Ajoute padding-top pour le header */
+    flex-grow: 1;
+    overflow-y: auto;
+    height: 100vh;
+}
+/* Ajustement du main-content pour header ET footer */
+.main-content.with-header-and-footer {
+    padding: 100px 30px 60px 30px; /* padding-top pour header, padding-bottom pour footer */
+    flex-grow: 1; /* Permet au main de prendre l'espace disponible */
+    overflow-y: auto;
+    min-height: 0; /* Permet au scroll de fonctionner correctement */
+}
+
+/* Nouveaux styles pour le footer */
+.page-footer {
+    background-color: var(--sidebar-bg);
+    padding: 10px 20px;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
     text-align: center;
-}
-.sidebar h1 i {
-    margin-right: 10px;
-}
-
-.sidebar nav ul {
-    list-style: none;
-}
-
-.sidebar nav li {
-    margin-bottom: 10px;
-}
-
-.sidebar nav a {
-    text-decoration: none;
-    color: var(--text-color);
-    display: block;
-    padding: 10px 15px;
-    border-radius: 5px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-.sidebar nav a i {
-    margin-right: 10px;
-    width: 20px;
-    text-align: center;
-}
-
-.sidebar nav a:hover {
-    background-color: var(--hover-light);
-}
-
-.sidebar nav a.active {
-    background-color: var(--primary-color);
-    color: var(--text-light);
-    font-weight: bold;
-}
-
-.sidebar-footer {
-    margin-top: auto;
     font-size: 0.8em;
-    text-align: center;
-    padding-top: 20px;
+    color: var(--text-muted);
     border-top: 1px solid var(--border-color);
 }
-/* --- Barre Latérale (Sidebar) Suite --- */
-
-/* Conteneur pour le logo dans la sidebar */
-.sidebar-logo-container {
-    text-align: center; /* Centre l'image horizontalement */
-    padding: 15px 0; /* Espace vertical autour du logo */
-    margin-bottom: 10px; /* Espace avant le lien Stats */
-    /* Optionnel: ajouter une bordure si vous voulez le séparer */
-    /* border-top: 1px solid var(--border-color); */
-    /* border-bottom: 1px solid var(--border-color); */
-}
-
-/* Style de l'image logo elle-même */
-#sidebar-logo {
-    max-width: 80%; /* Limite la largeur pour ne pas coller aux bords */
-    height: auto; /* Garde les proportions */
-    max-height: 60px; /* Limite la hauteur maximale (ajustez si besoin) */
-    display: inline-block; /* Nécessaire pour que text-align fonctionne bien */
+/* Ajustements responsifs */
+@media (max-width: 768px) {
+    .header-nav {
+        gap: 10px;
+    }
+    
+    .header-title {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .main-content.with-header {
+        padding-top: 120px;
+    }
+    .main-content.with-header-and-footer {
+        padding-top: 120px; /* Comme avant pour le header */
+        padding-bottom: 50px; /* Ajusté pour le footer */
+    }
 }
 /* --- Contenu Principal --- */
 .main-content {
     flex-grow: 1;
-    padding: 30px;
+    padding: 90px;
     overflow-y: auto;
     height: 100vh;
+    width:100%;
 }
 
 .page {
