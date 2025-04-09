@@ -155,10 +155,11 @@ body {
 }
 /* Ajustement du main-content pour header ET footer */
 .main-content.with-header-and-footer {
-    padding: 100px 30px 60px 30px; /* padding-top pour header, padding-bottom pour footer */
+    padding: 100px 30px 70px 30px; /* padding-top pour header, padding-bottom pour footer */
     flex-grow: 1; /* Permet au main de prendre l'espace disponible */
     overflow-y: auto;
     min-height: 0; /* Permet au scroll de fonctionner correctement */
+   justify-content: flex-start; /* Contenu commence en haut */
 }
 
 /* Nouveaux styles pour le footer */
