@@ -60,18 +60,32 @@ body {
 }
 
 /* --- Barre Latérale (Sidebar) --- */
-.sidebar {
-    width: 250px;
-    background-color: var(--sidebar-bg);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    height: 100vh;
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-
+..sidebar {
+        position: fixed;
+        top: 0;
+        left: -250px;  /* Masqué hors de l'écran */
+        width: 250px;
+        height: 100%;
+        background: var(--sidebar-bg); /* Garde la couleur de fond */
+        transition: left 0.3s ease;
+        z-index: 1000;
+    }
+    .sidebar.active {
+        left: 0; /* La sidebar apparaît */
+    }
+    .menu-toggle {
+        display: block;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background-color: var(--primary-color);
+        color: #fff;
+        border: none;
+        padding: 10px;
+        z-index: 1001;
+        cursor: pointer;
+        border-radius: 4px;
+    }
 .sidebar h1 {
     font-size: 1.5em;
     color: var(--primary-color);
