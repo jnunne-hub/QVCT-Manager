@@ -259,13 +259,7 @@
     
         // --- 10. Event Listener Attachments ---
         try {
-            document.querySelectorAll('.header-nav .nav-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const pageId = link.getAttribute('href')?.substring(1);
-        if(pageId) navigateTo(pageId, true);
-    });
-});
+            sidebarLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); const pageId = link.getAttribute('href')?.substring(1); if(pageId) navigateTo(pageId, true); }); });
             window.addEventListener('popstate', () => { const pageId = window.location.hash.substring(1) || 'dashboard'; navigateTo(pageId, false); });
             // Fermeture modales standard
             allCloseBtns.forEach(btn => { const modal = btn.closest('.modal'); if(modal && modal.id !== 'animation-detail-modal') btn.addEventListener('click', () => closeModal(modal)); }); // Exclure détail ici
