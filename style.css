@@ -1215,64 +1215,195 @@ h2 i {
 /* --- Styles Responsive --- */
 /* ========================= */
 
-@media (max-width: 1400px) {
-    .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-}
-@media (max-width: 992px) {
-    .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-    .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } /* Ajustement pour stats */
-}
 @media (max-width: 768px) {
-    body { height: auto; overflow: visible; }
-    .app-container { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); align-items: center; overflow-y: hidden; }
-    .sidebar h1 { font-size: 1.1em; margin: 0 10px 0 0; white-space: nowrap; }
-    .sidebar nav { display: flex; flex-grow: 1; }
-    .sidebar nav ul { display: flex; width: 100%; }
-    .sidebar nav li { margin-bottom: 0; margin-right: 3px; flex-shrink: 0; }
-    .sidebar nav a { padding: 8px 10px; font-size: 0.85em; white-space: nowrap; }
-    .sidebar nav a i { margin-right: 5px; }
-    .sidebar-footer { display: none; }
+    body {
+        height: auto;
+        overflow-x: hidden; /* Prevent horizontal scroll caused by hidden sidebar */
+         /* Add 'position: relative' if sidebar uses absolute positioning relative to body */
+    }
 
-    .main-content { height: auto; padding: 15px; overflow-y: visible; }
-    .modal-content { margin: 10% auto; width: 95%; padding: 20px; } /* Moins de marge haute */
+    .app-container {
+        flex-direction: column;
+        /* Remove flex if sidebar is position: fixed */
+        display: block; /* Or keep flex if needed, but adjust main content */
+        position: relative; /* Needed if sidebar is absolute positioned relative to this */
+        overflow-x: hidden;
+    }
+
+    .sidebar {
+        position: fixed; /* Takes it out of the normal flow */
+        left: 0;
+        top: 0;
+        width: 250px; /* Or your preferred width */
+        height: 100%; /* Full height */
+        z-index: 1001; /* Above overlay and content */
+        transform: translateX(-100%); /* Hide it off-screen to the left */
+        transition: transform 0.3s ease-in-out;
+        /* Keep existing styles like background, padding, overflow-y: auto */
+        background-color: var(--sidebar-bg);
+        padding: 20px;
+        display: flex; /* Revert to column */
+        flex-direction: column;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        overflow-y: auto;
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+
+    /* State when the sidebar is open */
+    body.sidebar-open .sidebar {
+        transform: translateX(0%); /* Slide it into view */
+    }
+
+    /* Keep original sidebar item styles (adjust if needed) */
+     .sidebar h1 {
+         font-size: 1.5em; /* Restore original size or adjust */
+         color: var(--primary-color);
+         margin-bottom: 30px;
+         text-align: center;
+     }
+     .sidebar nav ul {
+         list-style: none;
+         display: block; /* Revert to vertical list */
+         width: auto;    /* Revert width */
+     }
+     .sidebar nav li {
+         margin-bottom: 10px; /* Restore margin */
+         margin-right: 0;     /* Remove horizontal margin */
+     }
+     .sidebar nav a {
+         /* Restore original padding/font or adjust */
+         padding: 10px 15px;
+         font-size: 1em;
+     }
+     .sidebar nav a i {
+          margin-right: 10px; /* Restore icon margin */
+     }
+    /* IMPORTANT: Show the footer again on mobile if needed */
+    .sidebar-footer {
+        display: block; /* Or flex if you used that */
+        margin-top: auto;
+        font-size: 0.8em;
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* Adjust main content */
+    .main-content {
+        width: 100%; /* Ensure it takes full width */
+        height: auto;
+        padding: 15px; /* Keep smaller padding */
+        overflow-y: visible;
+        margin-left: 0; /* Remove any potential margin left from desktop */
+        transition: filter 0.3s ease-in-out; /* Optional: dim content when menu open */
+    }
+
+    body.sidebar-open .main-content {
+       /* Optional: Dim or disable interaction */
+       /* filter: blur(2px) brightness(0.7); */
+       /* pointer-events: none; */
+    }
+
+
+    /* --- Hamburger Button --- (Add this) */
+    .hamburger-btn {
+        display: block; /* Show on mobile */
+        position: fixed; /* Keep it fixed on screen */
+        top: 15px;
+        left: 15px;
+        z-index: 1002; /* Above sidebar */
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.2em;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+     /* --- Overlay --- (Add this) */
+    .overlay {
+        display: none; /* Hidden by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+        z-index: 1000; /* Below sidebar, above content */
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    body.sidebar-open .overlay {
+        display: block; /* Show when sidebar is open */
+        opacity: 1;
+    }
+
+
+    /* Keep other mobile adjustments like modal size, card gaps etc. */
+    .modal-content { margin: 10% auto; width: 95%; padding: 20px; }
     .modal form label { font-size: 0.9em; }
     .modal form input, .modal form select, .modal form textarea { padding: 10px; }
     .modal form button[type="submit"] { padding: 10px; font-size: 1em;}
 
     .animation-grid, .task-grid, .member-grid { gap: 15px; }
-    .animation-card, .task-card, .member-card { min-height: auto; } /* Hauteur auto sur mobile */
+    .animation-card, .task-card, .member-card { min-height: auto; }
 
-    .animation-card .card-header h3 { font-size: 1.1em; }
     .animation-card .card-body, .animation-card .card-header, .animation-card .card-footer { padding: 15px; }
     .task-card .card-body, .task-card .card-footer { padding: 12px 15px; }
-    .member-card .card-body, .member-card .card-footer { padding: 12px 15px; } /* Ajout pour membres */
-    .member-card .member-name { font-size: 1.05em; } /* Ajustement titre membre */
+    .member-card .card-body, .member-card .card-footer { padding: 12px 15px; }
+    .member-card .member-name { font-size: 1.05em; }
 
-    /* Pas de changement pour les list-item membres car ils sont supprimés */
-
-    .stats-details-container { grid-template-columns: 1fr; } /* 1 colonne sur mobile */
-    .filter-container { gap: 8px; } /* Moins d'espace entre filtres */
+    .stats-details-container { grid-template-columns: 1fr; }
+    .filter-container { gap: 8px; }
     .filter-container select { min-width: 150px; }
 }
+
+/* Hide Hamburger on Desktop */
+@media (min-width: 769px) {
+    .hamburger-btn {
+        display: none;
+    }
+    .overlay {
+        display: none !important; /* Ensure it's hidden */
+    }
+    /* Ensure body class doesn't affect desktop */
+    body.sidebar-open .sidebar {
+        transform: none; /* Reset transform */
+    }
+     body.sidebar-open .main-content {
+         filter: none; /* Reset filter */
+     }
+}
+
+/* Add styles for smaller phones if needed */
 @media (max-width: 480px) {
-    .animation-grid, .task-grid, .member-grid { grid-template-columns: 1fr; } /* 1 colonne */
+    /* Your existing rules */
+    .animation-grid, .task-grid, .member-grid { grid-template-columns: 1fr; }
     .animation-card .card-header h3, .task-card .task-description, .member-card .member-name { font-size: 1em; }
-    .animation-card .card-body { gap: 10px; } /* Moins d'espace carte anim */
-    .card-details-row { gap: 5px 10px; padding-bottom: 5px; } /* Moins d'espace détails anim */
+    .animation-card .card-body { gap: 10px; }
+    .card-details-row { gap: 5px 10px; padding-bottom: 5px; }
     .detail-item { font-size: 0.8em; }
-    .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 4; } /* Moins de lignes desc */
+    .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 4; }
 
     .task-card .card-detail { font-size: 0.8em; }
-    .member-card .member-detail { font-size: 0.85em; } /* Détail membre */
+    .member-card .member-detail { font-size: 0.85em; }
 
     .card-footer .btn { font-size: 0.8em; padding: 5px 10px;}
     .summary-card h3 { font-size: 1.05em; }
     .summary-card p { font-size: 2em; }
-    .modal-content { margin: 5% auto; padding: 15px 20px; } /* Encore moins de marge */
-    .checkbox-list { max-height: 130px; } /* Moins haut */
-}
+    .modal-content { margin: 5% auto; padding: 15px 20px; }
+    .checkbox-list { max-height: 130px; }
 
+     /* Adjust hamburger position if needed */
+     .hamburger-btn {
+         top: 10px;
+         left: 10px;
+     }
+}
+    
 /* Animation pour le spinner (si Font Awesome ne le fait pas auto) */
 @keyframes fa-spin {
   0% { transform: rotate(0deg); }
