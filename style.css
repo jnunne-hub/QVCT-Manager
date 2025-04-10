@@ -247,8 +247,8 @@ body {
 /* --- Contenu Principal --- */
 .main-content {
     flex-grow: 1;
-    padding-left: 30px;
-    padding-top: calc(var(--header-height) + 1px);
+    padding: 30px;
+    /*padding-top: calc(var(--header-height) + 1px);
     /*overflow-y: auto;
     height: 100vh;*/
     padding-bottom: 90px; /* Ex: 80px pour laisser de la marge */
