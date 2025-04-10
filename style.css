@@ -1486,6 +1486,7 @@ h2 i {
          /* align-items: flex-start; */
     }
      .app-header h1 {
+        display: none;
         font-size: 1.1em;
     }
     #header-logo {
@@ -1559,7 +1560,8 @@ h2 i {
         /* display: none; /* Cache le texte "QVCT Manager" */
      }
      .app-header h1 {
-         font-size: 1em; /* Juste l'icône ou très petit texte */
+         display: none; 
+        font-size: 1em; /* Juste l'icône ou très petit texte */
      }
      #header-logo {
          height: 28px;
