@@ -1372,80 +1372,233 @@ h2 i {
 /* --- Styles Responsive --- */
 /* ========================= */
 
-@media (max-width: 1400px) {
-    .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+/* --- Tablette (Large) et Petits Laptops --- */
+@media (max-width: 1200px) {
+    .main-content {
+        padding: 25px; /* Un peu moins de padding */
+        padding-top: calc(var(--header-height) + 25px);
+        padding-bottom: 75px; /* Ajuster si footer change */
+    }
+    .dashboard-summary {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .app-header {
+        padding: 0 20px;
+    }
+    .app-footer {
+        padding: 8px 20px;
+    }
 }
-@media (max-width: 992px) {
-    .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-    .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } /* Ajustement pour stats */
-}
-@media (max-width: 768px) {
-    body { height: auto; overflow: visible; }
-    .app-container { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); align-items: center; overflow-y: hidden; }
-    .sidebar h1 { font-size: 1.1em; margin: 0 10px 0 0; white-space: nowrap; }
-    .sidebar nav { display: flex; flex-grow: 1; }
-    .sidebar nav ul { display: flex; width: 100%; }
-    .sidebar nav li { margin-bottom: 0; margin-right: 3px; flex-shrink: 0; }
-    .sidebar nav a { padding: 8px 10px; font-size: 0.85em; white-space: nowrap; }
-    .sidebar nav a i { margin-right: 5px; }
-    .sidebar-footer { display: none; }
 
-    .main-content { height: auto; padding: 15px; overflow-y: visible; }
-    .modal-content { margin: 10% auto; width: 95%; padding: 20px; } /* Moins de marge haute */
+/* --- Tablette (Standard) --- */
+@media (max-width: 992px) {
+    .app-header {
+        padding: 0 15px; /* Moins de padding */
+        height: auto; /* Permettre au header de grandir si besoin */
+        min-height: 55px; /* Hauteur minimale */
+        flex-wrap: wrap; /* Permettre aux éléments de passer à la ligne */
+        position: sticky; /* Garder sticky */
+        /* Recalculer dynamiquement var(--header-height) n'est pas simple en pur CSS,
+           on utilisera une valeur fixe pour le padding-top du main-content,
+           basée sur la hauteur attendue */
+    }
+    #header-logo {
+        height: 35px;
+        margin-right: 10px;
+    }
+    .app-header h1 {
+        font-size: 1.2em; /* Titre un peu plus petit */
+        margin-bottom: 5px; /* Espace si la nav passe en dessous */
+    }
+    .header-brand {
+        /* Prend moins de place si besoin */
+        flex-shrink: 1;
+    }
+    .header-nav {
+        /* Prend toute la largeur si elle passe à la ligne */
+        width: 100%;
+        order: 3; /* Mettre la nav après brand et auth si ça wrap */
+        justify-content: center; /* Centrer les icones si ça wrap */
+        margin-top: 5px; /* Espace si elle passe sous le titre */
+    }
+    .header-nav ul {
+        justify-content: center; /* Centrer les items dans la liste */
+        flex-wrap: wrap; /* Permettre aux icones de passer à la ligne si vraiment nécessaire */
+    }
+     .header-nav a {
+        width: 38px; /* Icônes légèrement plus petites */
+        height: 38px;
+        padding: 8px;
+    }
+     .header-nav a i {
+        font-size: 1em;
+    }
+
+     /* Zone Auth Header */
+     .header-auth {
+       /* Optionnel: Ajuster positionnement si nécessaire */
+       margin-left: auto; /* Pousse à droite à côté du brand */
+       order: 2; /* S'assure qu'il est après le brand */
+     }
+
+    .main-content {
+        padding: 20px;
+        /* Valeur fixe pour padding-top, car header peut wrapper */
+        padding-top: 85px; /* Ajuster cette valeur basée sur tests hauteur header */
+        padding-bottom: 70px; /* Ajuster pour footer */
+    }
+
+    .dashboard-summary {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .stats-details-container {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .app-footer {
+        padding: 7px 15px;
+        justify-content: center; /* Centrer contenu */
+        text-align: center;
+    }
+     #footer-auth-container {
+        justify-content: center; /* Centrer les boutons auth */
+        order: 1; /* Auth avant copyright */
+        margin-bottom: 5px; /* Espace avant copyright */
+    }
+    .copyright-text {
+        width: 100%; /* Prendre toute la largeur */
+        text-align: center;
+        order: 2; /* Copyright après auth */
+        font-size: 0.75em;
+    }
+
+    /* Ajustements Modales & Cartes (Peuvent rester similaires) */
+    .modal-content { margin: 10% auto; width: 90%; padding: 25px; }
+    .animation-grid, .task-grid, .member-grid { gap: 18px; }
+}
+
+
+/* --- Mobile (Portrait) --- */
+@media (max-width: 767px) { /* Point de rupture avant 768 */
+    .app-header {
+        min-height: 50px; /* Encore plus petit */
+         /* flex-direction: column; /* Option: Forcer vertical */
+         /* align-items: flex-start; */
+    }
+     .app-header h1 {
+        font-size: 1.1em;
+    }
+    #header-logo {
+        height: 30px;
+    }
+    .header-nav {
+         /* Option: Occuper toute la largeur en bas */
+         /* margin-top: 10px; */
+    }
+     .header-nav ul {
+        gap: 2px; /* Encore moins d'espace */
+        justify-content: space-around; /* Mieux répartir */
+    }
+    .header-nav a {
+        width: 36px;
+        height: 36px;
+    }
+
+    .main-content {
+        padding: 15px;
+        /* Ajuster padding-top si hauteur header change */
+        padding-top: 80px; /* Ex: Un peu moins si header plus petit */
+        padding-bottom: 65px; /* Ajuster pour footer */
+    }
+
+    /* Grilles en une colonne */
+    .dashboard-summary,
+    .stats-details-container,
+    .animation-grid,
+    .task-grid,
+    .member-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+     /* Assurer que les cartes graphiques prennent toute la largeur */
+    .summary-card.chart-card {
+       grid-column: 1 / -1; /* Redondant si grille est 1fr, mais sûr */
+    }
+     .stat-chart-block.full-width {
+        grid-column: 1 / -1; /* Redondant mais sûr */
+    }
+
+    .app-footer {
+        padding: 6px 10px; /* Padding minimal */
+        flex-direction: column; /* Empiler verticalement */
+    }
+    #footer-auth-container {
+        margin-bottom: 8px; /* Plus d'espace */
+    }
+    .copyright-text {
+         font-size: 0.7em;
+    }
+
+    /* Ajustements formulaires/modales */
+    .modal-content { margin: 8% auto; width: 95%; padding: 20px; }
     .modal form label { font-size: 0.9em; }
     .modal form input, .modal form select, .modal form textarea { padding: 10px; }
     .modal form button[type="submit"] { padding: 10px; font-size: 1em;}
-
-    .animation-grid, .task-grid, .member-grid { gap: 15px; }
-    .animation-card, .task-card, .member-card { min-height: auto; } /* Hauteur auto sur mobile */
-
-    .animation-card .card-header h3 { font-size: 1.1em; }
-    .animation-card .card-body, .animation-card .card-header, .animation-card .card-footer { padding: 15px; }
-    .task-card .card-body, .task-card .card-footer { padding: 12px 15px; }
-    .member-card .card-body, .member-card .card-footer { padding: 12px 15px; } /* Ajout pour membres */
-    .member-card .member-name { font-size: 1.05em; } /* Ajustement titre membre */
-
-    /* Pas de changement pour les list-item membres car ils sont supprimés */
-
-    .stats-details-container { grid-template-columns: 1fr; } /* 1 colonne sur mobile */
-    .filter-container { gap: 8px; } /* Moins d'espace entre filtres */
-    .filter-container select { min-width: 150px; }
+    .checkbox-list { max-height: 140px; }
+    .filter-container { flex-direction: column; align-items: stretch; }
+    .filter-container label { margin-bottom: 3px; }
+    .filter-container select { width: 100%; min-width: 0;}
 }
+
+/* --- Mobile (Très Petit) --- */
 @media (max-width: 480px) {
-    .main-content {
-         padding-left: 15px;
-         padding-top: calc(var(--header-height) + 5px);
+    .app-header {
+        padding: 0 10px;
     }
+     .app-header h1 span { /* Si vous avez mis un span autour du texte */
+        /* display: none; /* Cache le texte "QVCT Manager" */
+     }
      .app-header h1 {
-         font-size: 1em;
+         font-size: 1em; /* Juste l'icône ou très petit texte */
      }
-     .header-nav {
-         /* Cache potentiellement la nav ou la transforme en burger */
-         /* Ou juste réduit encore l'espace */
-         gap: 2px;
+     #header-logo {
+         height: 28px;
+         margin-right: 8px;
      }
-     .header-nav a {
-         width: 32px;
-         height: 32px;
-         padding: 6px;
+      .header-nav ul {
+        /* Option: Justifier moins pour éviter compression extrême */
+        /* justify-content: center; */
+        gap: 1px;
      }
-    .animation-grid, .task-grid, .member-grid { grid-template-columns: 1fr; } /* 1 colonne */
-    .animation-card .card-header h3, .task-card .task-description, .member-card .member-name { font-size: 1em; }
-    .animation-card .card-body { gap: 10px; } /* Moins d'espace carte anim */
-    .card-details-row { gap: 5px 10px; padding-bottom: 5px; } /* Moins d'espace détails anim */
-    .detail-item { font-size: 0.8em; }
-    .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 4; } /* Moins de lignes desc */
+    .header-nav a {
+         width: 34px;
+         height: 34px;
+         padding: 5px;
+     }
+     .header-nav a i {
+         font-size: 0.9em;
+     }
 
-    .task-card .card-detail { font-size: 0.8em; }
-    .member-card .member-detail { font-size: 0.85em; } /* Détail membre */
+    .main-content {
+         padding: 10px;
+         padding-top: 75px; /* Ajuster */
+         padding-bottom: 60px; /* Ajuster */
+    }
 
-    .card-footer .btn { font-size: 0.8em; padding: 5px 10px;}
-    .summary-card h3 { font-size: 1.05em; }
+    /* Ajustements tailles textes cartes */
+    .summary-card h3 { font-size: 1em; }
     .summary-card p { font-size: 2em; }
-    .modal-content { margin: 5% auto; padding: 15px 20px; } /* Encore moins de marge */
-    .checkbox-list { max-height: 130px; } /* Moins haut */
+    .animation-card .card-header h3, .task-card .task-description, .member-card .member-name { font-size: 1em; }
+    .detail-item { font-size: 0.8em; }
+    .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 3; }
+    .task-card .card-detail { font-size: 0.8em; }
+    .member-card .member-detail { font-size: 0.85em; }
+    .card-footer .btn { font-size: 0.8em; padding: 5px 8px;}
+
+    .modal-content { margin: 5% auto; padding: 15px; }
+    .checkbox-list { max-height: 120px; }
 }
+
 
 /* Animation pour le spinner (si Font Awesome ne le fait pas auto) */
 @keyframes fa-spin {
