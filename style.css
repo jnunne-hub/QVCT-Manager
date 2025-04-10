@@ -1486,8 +1486,8 @@ h2 i {
          /* align-items: flex-start; */
     }
      .app-header h1 {
-        display: none;
-        font-size: 1.1em;
+        display: none !important;
+        /*font-size: 1.1em;*/
     }
     #header-logo {
         height: 30px;
