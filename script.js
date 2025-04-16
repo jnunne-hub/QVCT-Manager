@@ -151,7 +151,7 @@ const getDateValueInMillis = (dateFieldValue) => {
     if (timeA === Infinity) return 1; // Met A après B si A est invalide/null
     if (timeB === Infinity) return -1; // Met B après A si B est invalide/null
     return timeA - timeB; // Tri ascendant normal
-}); if (filteredTasks.length === 0) { taskListDiv.innerHTML = `<p>Aucune tâche trouvée ${selectedAnimId !== 'all' ? 'pour cette animation': ''}.</p>`; return; } taskListDiv.innerHTML = ''; filteredTasks.forEach((task, index) => { const taskId = task.id; const animation = cachedAnimations.find(a => a.id === task.animationId); const div = document.createElement('div'); const statusClass = (task.status || 'à faire').replace(' ', '-'); div.className = `task-card status-${statusClass} card-hidden`; div.setAttribute('data-id', taskId); let date = 'N/A'; let overdue = ''; date = 'N/A'; let overdue = '';
+}); if (filteredTasks.length === 0) { taskListDiv.innerHTML = `<p>Aucune tâche trouvée ${selectedAnimId !== 'all' ? 'pour cette animation': ''}.</p>`; return; } taskListDiv.innerHTML = ''; filteredTasks.forEach((task, index) => { const taskId = task.id; const animation = cachedAnimations.find(a => a.id === task.animationId); const div = document.createElement('div'); const statusClass = (task.status || 'à faire').replace(' ', '-'); div.className = `task-card status-${statusClass} card-hidden`; div.setAttribute('data-id', taskId); let date = 'N/A'; let overdue = ''; date = 'N/A';
 try {
     let dateObj = null;
     if (task.dueDate?.toDate) { // Priorité au timestamp
