@@ -83,7 +83,7 @@
         body.classList.toggle('sidebar-open');
     };
 
-        /**
+ /**
  * Helper pour obtenir la valeur numérique (ms) d'une date (Timestamp, String, etc.)
  * @param {*} dateFieldValue - La valeur du champ date (dateTime ou dueDate)
  * @returns {number} - Timestamp en millisecondes ou Infinity si invalide/erreur
@@ -109,8 +109,7 @@ const getDateValueInMillis = (dateFieldValue) => {
          console.warn("Erreur parsing Date:", dateFieldValue, e);
          return Infinity; // Erreur de parsing
     }
-};
-        // --- Fin Utilitaires ---
+};       // --- Fin Utilitaires ---
     
     
         // --- 5. Logique de Navigation ---
@@ -346,15 +345,15 @@ try {
 
             // Trier les tâches (par exemple, par échéance - Optionnel mais utile)
              relatedTasks.sort((a, b) => {
-                 // Utilise la logique de tri originale pour dueDate (qui peut échouer si dueDate est String)
-                 // Si vous avez des erreurs ici, il faudra appliquer la correction de date robuste
-                 const timeA = a.dueDate?.toDate?.getTime() || Infinity;
-                 const timeB = b.dueDate?.toDate?.getTime() || Infinity;
-                 if (timeA === Infinity && timeB === Infinity) return 0;
-                 if (timeA === Infinity) return 1;
-                 if (timeB === Infinity) return -1;
-                 return timeA - timeB; // Tri ascendant
-             });
+        const timeA = getDateValueInMillis(a.dueDate); // Utilise l'helper
+        const timeB = getDateValueInMillis(b.dueDate); // Utilise l'helper
+
+        // Gestion de Infinity pour tri ascendant (place les erreurs/nulls à la fin)
+        if (timeA === Infinity && timeB === Infinity) return 0;
+        if (timeA === Infinity) return 1; // Met A après B si A est invalide/null
+        if (timeB === Infinity) return -1; // Met B après A si B est invalide/null
+        return timeA - timeB; // Tri ascendant normal
+    });
 
             if (relatedTasks.length === 0) {
                 modalTaskContent.innerHTML = '<p style="text-align:center; color:#888; font-style:italic; padding: 20px 0;">Aucune tâche associée à cette animation.</p>';
