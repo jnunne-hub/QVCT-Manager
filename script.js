@@ -309,8 +309,119 @@ try {
         const showAnimationDetails = async (animationId) => { if (!currentUser || !animationId) return; if (!animationDetailModal || !animationDetailContent || !detailModalTitle || !editFromDetailBtn) { console.error("Éléments DOM modale détail manquants."); return; } detailContent.innerHTML = '<p>Chargement...</p>'; detailTitle.textContent = "Détail de l'Animation"; openModal(animationDetailModal); currentDetailAnimationId = animationId; try { await Promise.all([loadAnimationsIntoCache(), loadMembersIntoCache()]); const animation = cachedAnimations.find(a => a.id === animationId); if (!animation) { detailContent.innerHTML = '<p class="error-message">Animation non trouvée.</p>'; currentDetailAnimationId = null; return; } if (animation.title) { detailModalTitle.textContent = `Détail: ${animation.title}`; } let dateStr = 'N/D'; if(animation.dateTime?.toDate){ try{ dateStr = animation.dateTime.toDate().toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short'})} catch(e){} } let participantsList = 'Aucun'; if (animation.participantIds && animation.participantIds.length > 0) { participantsList = '<ul>'; animation.participantIds.forEach(pId => { const member = cachedMembers.find(m => m.id === pId); participantsList += `<li>${member ? member.firstname + ' ' + member.lastname : 'Membre inconnu'}</li>`; }); participantsList += '</ul>'; } let documentsList = 'Aucun'; if (animation.documentLinks && animation.documentLinks.length > 0) { documentsList = '<ul>'; animation.documentLinks.forEach(link => { let linkText = link; try { linkText = new URL(link).pathname.split('/').pop() || link; } catch(e){} documentsList += `<li><a href="${link}" target="_blank" rel="noopener noreferrer">${linkText}</a></li>`; }); documentsList += '</ul>'; } detailContent.innerHTML = ` <p><strong><i class="fas fa-calendar-day"></i> Date:</strong> ${dateStr}</p> <p><strong><i class="fas fa-map-marker-alt"></i> Lieu:</strong> ${animation.location || 'N/D'}</p> <p><strong><i class="fas fa-tags"></i> Type:</strong> ${animation.animationType || 'N/D'}</p> <p><strong><i class="fas fa-info-circle"></i> Statut:</strong> ${animation.status || 'N/D'}</p> <p><strong><i class="fas fa-euro-sign"></i> Budget:</strong> ${animation.budget !== undefined && animation.budget !== null ? animation.budget.toLocaleString('fr-FR') + ' €' : 'N/D'}</p> <p><strong><i class="fas fa-align-left"></i> Description:</strong><br><span style="margin-left: 24px; display: block; white-space: pre-wrap;">${animation.description || 'Aucune'}</span></p> <p><strong><i class="fas fa-users"></i> Participants:</strong></p> ${participantsList} <p><strong><i class="fas fa-paperclip"></i> Documents:</strong></p> ${documentsList} `; } catch (error) { console.error("Erreur affichage détails animation:", error); detailContent.innerHTML = '<p class="error-message">Impossible de charger les détails.</p>'; currentDetailAnimationId = null; } };
         // ... (Handler Export CSV - Identique v19) ...
         const handleExportCsvStats = () => { if(!currentUser) {alert('Connectez-vous pour exporter.'); return;} console.log("Début export CSV stats..."); if (!membersLoaded || !animationsLoaded || !tasksLoaded) { alert("Données non chargées pour l'export."); return; } try { let csvRows = []; const headers = ['Section', 'Indicateur / Nom', 'Valeur / Détail 1', 'Détail 2', 'Détail 3'].map(escapeCsvValue).join(';'); csvRows.push(headers); csvRows.push(['Indicateurs Clés', escapeCsvValue('Animations Réalisées'), escapeCsvValue(statsTotalCompletedEl?.textContent || 'N/A'), '', ''].join(';')); csvRows.push(['', escapeCsvValue('Taux Participation Moyen (%)'), escapeCsvValue(statsAvgParticipationEl?.textContent?.replace('%','').trim() || 'N/A'), '', ''].join(';')); csvRows.push(['', escapeCsvValue('Budget Total Engagé (€)'), escapeCsvValue(statsTotalBudgetSpentEl?.textContent?.replace('€','').replace(/\s/g, '').trim() || 'N/A'), '', ''].join(';')); csvRows.push(['', '', '', '', '']); const typeCountsExport = cachedAnimations.reduce((acc, a) => { const type = a.animationType || 'Non défini'; acc[type] = (acc[type] || 0) + 1; return acc; }, {}); csvRows.push(['Répartition par Type', escapeCsvValue('Type'), escapeCsvValue('Nombre'), '', ''].join(';')); if(Object.keys(typeCountsExport).length > 0) { Object.entries(typeCountsExport).forEach(([type, count]) => { csvRows.push(['', escapeCsvValue(type), escapeCsvValue(count), '', ''].join(';')); }); } else { csvRows.push(['', escapeCsvValue('Aucune donnée'), '', '', ''].join(';')); } csvRows.push(['', '', '', '', '']); const completedAnims = cachedAnimations.filter(a => a.status === 'réalisée'); csvRows.push(['Animations Réalisées', escapeCsvValue('Titre'), escapeCsvValue('Type'), escapeCsvValue('Date'), escapeCsvValue('Participants')].join(';')); if (completedAnims.length > 0) { completedAnims.forEach(anim => { const dateStr = anim.dateTime?.toDate ? anim.dateTime.toDate().toLocaleDateString('fr-FR') : 'N/A'; const participantsCount = (anim.participantIds || []).length; const animType = anim.animationType || 'N/D'; csvRows.push(['', escapeCsvValue(anim.title), escapeCsvValue(animType), escapeCsvValue(dateStr), escapeCsvValue(participantsCount)].join(';')); }); } else { csvRows.push(['', escapeCsvValue('Aucune animation réalisée'), '', '', ''].join(';')); } csvRows.push(['', '', '', '', '']); const totalCompletedForExport = completedAnims.length; const memberParticipation = cachedMembers.map(m => { let c = 0; completedAnims.forEach(a => { if ((a.participantIds || []).includes(m.id)) c++; }); return { name: `${m.firstname} ${m.lastname}`, count: c, rate: totalCompletedForExport > 0 ? (c / totalCompletedForExport) * 100 : 0 }; }).sort((a, b) => b.count - a.count); csvRows.push(['Participation Membre', escapeCsvValue('Nom Membre'), escapeCsvValue('Nb Participations'), escapeCsvValue('Taux (%)'), ''].join(';')); if (memberParticipation.length > 0) { memberParticipation.forEach(m => { csvRows.push(['', escapeCsvValue(m.name), escapeCsvValue(m.count), escapeCsvValue(m.rate.toFixed(0)), ''].join(';')); }); } else { csvRows.push(['', escapeCsvValue('Aucun membre'), '', '', ''].join(';')); } const csvString = csvRows.join('\n'); const bom = '\uFEFF'; const encodedUri = encodeURI(`data:text/csv;charset=utf-8,${bom}${csvString}`); const link = document.createElement("a"); link.setAttribute("href", encodedUri); const exportDate = new Date().toISOString().split('T')[0]; link.setAttribute("download", `bilan_qvct_${exportDate}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link); console.log("Export CSV terminé."); } catch (error) { console.error("Erreur génération/téléchargement CSV:", error); alert("Erreur création fichier CSV."); } };
+       
         // --- Fin Event Handlers ---
-    
+    /**
+     * NOUVELLE FONCTION : Gère l'affichage des tâches liées à une animation dans une modale.
+     */
+    const handleShowAnimationTasks = async (animationId, animationTitle) => {
+        if (!currentUser) {
+            alert("Veuillez vous connecter pour voir les tâches.");
+            return;
+        }
+        // Vérifier si les éléments de la modale existent
+        if (!taskListModal || !modalTaskTitle || !modalTaskContent) {
+            console.error("Éléments DOM de la modale des tâches (#task-list-modal) non trouvés !");
+            alert("Erreur : Impossible d'afficher la modale des tâches.");
+            return;
+        }
+
+        // Préparer et ouvrir la modale
+        modalTaskTitle.textContent = `Tâches pour : ${animationTitle || 'Animation sélectionnée'}`;
+        modalTaskContent.innerHTML = '<p>Chargement des tâches associées...</p>';
+        openModal(taskListModal);
+
+        try {
+            // Assurer que les caches nécessaires sont chargés
+            // Normalement, ils devraient l'être si le dashboard ou la page Tâches a été vue.
+            // On peut ajouter une vérification ou un rechargement si nécessaire.
+            if (!tasksLoaded || !membersLoaded) {
+                 console.warn("handleShowAnimationTasks: Tentative d'affichage avant chargement complet des caches Tâches/Membres.");
+                 // Optionnel : forcer un rechargement, mais peut ralentir.
+                 // await Promise.all([loadTasksIntoCache(), loadMembersIntoCache()]);
+            }
+
+            // Filtrer les tâches pour cette animation
+            const relatedTasks = cachedTasks.filter(task => task.animationId === animationId);
+
+            // Trier les tâches (par exemple, par échéance - Optionnel mais utile)
+             relatedTasks.sort((a, b) => {
+                 // Utilise la logique de tri originale pour dueDate (qui peut échouer si dueDate est String)
+                 // Si vous avez des erreurs ici, il faudra appliquer la correction de date robuste
+                 const timeA = a.dueDate?.toDate?.getTime() || Infinity;
+                 const timeB = b.dueDate?.toDate?.getTime() || Infinity;
+                 if (timeA === Infinity && timeB === Infinity) return 0;
+                 if (timeA === Infinity) return 1;
+                 if (timeB === Infinity) return -1;
+                 return timeA - timeB; // Tri ascendant
+             });
+
+            if (relatedTasks.length === 0) {
+                modalTaskContent.innerHTML = '<p style="text-align:center; color:#888; font-style:italic; padding: 20px 0;">Aucune tâche associée à cette animation.</p>';
+                return;
+            }
+
+            // Générer le HTML pour la liste des tâches dans la modale
+            let tasksHtml = '';
+            relatedTasks.forEach(task => {
+                let dateStr = 'N/A';
+                let overdueClass = '';
+                let dateObj = null;
+                // Tentative de gestion simple des dates (String ou Timestamp) pour l'affichage
+                try {
+                    if (task.dueDate?.toDate) { // Priorité au Timestamp
+                         dateObj = task.dueDate.toDate();
+                    } else if (task.dueDate) { // Essayer de parser si ce n'est pas un timestamp
+                         dateObj = new Date(task.dueDate + 'T00:00:00'); // Ajout T00 pour éviter pbs timezone potentiels
+                    }
+
+                    if (dateObj instanceof Date && !isNaN(dateObj.getTime())) { // Vérifier si on a une date valide
+                         dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+                        if (task.status !== 'terminé' && dateObj.getTime() < Date.now() - 864e5) {
+                             overdueClass = 'text-danger'; // Assurez-vous que cette classe existe en CSS
+                        }
+                    }
+                } catch (e) { dateStr = 'Date invalide'; }
+
+
+                let statusIcon = '<i class="fas fa-circle" style="color: var(--warning-color);"></i>'; // Défaut: à faire
+                if(task.status === 'en cours') statusIcon = '<i class="fas fa-spinner fa-spin" style="color: var(--primary-color);"></i>';
+                else if (task.status === 'terminé') statusIcon = '<i class="fas fa-check-circle" style="color: var(--success-color);"></i>';
+
+                const assigneeIds = Array.isArray(task.assigneeIds) ? task.assigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+                let assigneesText = 'N/A';
+                if (assigneeIds.length > 0 && membersLoaded) {
+                     assigneesText = assigneeIds.map(id => {
+                         const member = cachedMembers.find(m => m.id === id);
+                         return member ? `${member.firstname} ${member.lastname}` : 'Inconnu';
+                     }).join(', ');
+                 }
+
+                tasksHtml += `
+                    <div class="modal-task-item">
+                        <p class="task-desc">${task.description || 'Tâche sans description'}</p>
+                        <div class="task-detail">
+                           ${statusIcon} <span>Statut : ${task.status || 'N/A'}</span>
+                        </div>
+                        <div class="task-detail">
+                           <i class="fas fa-users"></i> <span>Assigné(s) : ${assigneesText}</span>
+                        </div>
+                        <div class="task-detail">
+                           <i class="fas fa-clock"></i> <span class="${overdueClass}">Échéance : ${dateStr} ${overdueClass ? '(Retard!)' : ''}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            modalTaskContent.innerHTML = tasksHtml;
+
+        } catch (error) {
+            console.error("Erreur lors du chargement/affichage des tâches dans la modale :", error);
+            // Afficher l'erreur dans la modale
+            modalTaskContent.innerHTML = `<p class="error-message" style="padding: 20px;">Erreur lors du chargement des tâches associées.<br><small>${error.message}</small></p>`;
+             // Si l'erreur est due au tri des dates String, le message d'erreur s'affichera ici.
+        }
+    };
     
         // --- Fonctions Auth ---
         const signInWithGoogle = async () => { const provider = new firebase.auth.GoogleAuthProvider(); try { console.log("Tentative connexion Google..."); const result = await auth.signInWithPopup(provider); console.log("Connecté avec Google:", result.user.displayName); } catch (error) { console.error("Erreur connexion Google:", error); if (error.code === 'auth/popup-closed-by-user') { alert("Fenêtre connexion fermée."); } else if (error.code === 'auth/cancelled-popup-request') { console.warn("Popups multiples."); } else if (error.code === 'auth/unauthorized-domain') { alert("Domaine non autorisé. Vérifiez la config Firebase.");} else { alert(`Erreur connexion: ${error.message}`); } } };
