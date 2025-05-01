@@ -1,547 +1,118 @@
-/* ====================================================== */
-/*    STYLE.CSS COMPLET (v30 - Refactorisation Cartes)    */
-/* ====================================================== */
+/**
+ * QVCT Manager - Script Principal v31 (Réécriture Complète + Debug Dashboard/Stats)
+ *
+ * Tentative de correction pour les données vides dans Dashboard/Stats.
+ * Vérification de la logique de chargement et ajout de logs détaillés.
+ */
+'use strict';
 
-/* #region --- Variables et Styles de Base --- */
-:root {
-   /* Palette Principale */
-    --primary-color: #6C9D7E; /* Vert sauge doux */
-    --secondary-color: #A8D8B9; /* Vert d'eau clair */
-    --accent-color: #F7C873; /* Ocre / Moutarde doux */
-    --background-color: #F9F9F9; /* Blanc cassé / Très léger gris */
-    --header-bg: #FFFFFF; /* Fond du header */
-    --footer-bg: #F0F4F1; /* Fond du footer */
-    --text-color: #4A4A4A; /* Gris anthracite foncé */
-    --text-light: #FFFFFF;
-    --text-muted: #88939E; /* Gris clair pour textes secondaires */
-    --border-color: #EAEAEA; /* Gris clair bordures */
-    --hover-light: #F0F4F1; /* Survol sidebar/listes */
+document.addEventListener('DOMContentLoaded', () => {
 
-    /* Ombres Douces */
-    --shadow-color-soft: rgba(108, 157, 126, 0.08); /* Ombre verte très douce */
-    --shadow: 0 3px 8px var(--shadow-color-soft);
-    --card-shadow: 0 5px 15px var(--shadow-color-soft);
-    --card-hover-shadow: 0 10px 25px rgba(108, 157, 126, 0.12); /* Ombre survol plus marquée */
+    // #region Vérification Dépendances et Initialisation Firebase
+    try {
+        if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) throw new Error("SDK Firebase (firestore, auth) non chargé ou incomplet.");
+        if (typeof firebaseConfig === 'undefined') throw new Error("firebaseConfig non défini.");
+        if (typeof Chart === 'undefined') throw new Error("Chart.js non chargé.");
+        if (typeof FullCalendar === 'undefined' || !FullCalendar.Calendar) throw new Error("FullCalendar non chargé ou incomplet.");
+        console.log("Vérifications initiales des dépendances OK.");
+    } catch (err) {
+        console.error("ERREUR CRITIQUE INIT:", err);
+        document.body.innerHTML = `<div style="padding: 40px; text-align: center;"><h1 style="color: red;">Erreur Critique</h1><p>Impossible de charger l'application : ${err.message}. Vérifiez l'inclusion des bibliothèques et la console.</p></div>`;
+        return;
+    }
+    let db; let auth; try { if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); console.log("Firebase Initialized"); } else { firebase.app(); console.log("Firebase App already exists"); } db = firebase.firestore(); auth = firebase.auth(); console.log("Firestore & Auth Ready"); } catch (initError) { console.error("Erreur Init Firebase:", initError); document.body.innerHTML = `<div style="padding: 40px; text-align: center;"><h1 style="color: red;">Erreur Initialisation Firebase</h1><p>Impossible d'initialiser Firebase.</p></div>`; return; }
+    const membersCollection = db.collection('members'); const animationsCollection = db.collection('animations'); const tasksCollection = db.collection('tasks'); const authorizedUsersCollection = db.collection('authorizedUsers');
+    const documentsCollection = db.collection('documents');
+    // #endregion
 
-    /* Couleurs Status / Alertes (Subtiles) */
-    --danger-color: #E87E7E; /* Rouge corail doux */
-    --success-color: #87C7A1; /* Vert succès doux */
-    --warning-color: var(--accent-color);
-    --info-color: #88BBD6; /* Bleu ciel doux */
-    --neutral-color: #B0BEC5; /* Gris bleuté neutre */
-    --link-color: #7E8DCC; /* Bleu lavande doux */
+    // #region Références aux Éléments DOM
+    const navLinks = document.querySelectorAll('.nav-link'); const pages = document.querySelectorAll('.page'); const allCloseBtns = document.querySelectorAll('.modal .close-btn'); const allModals = document.querySelectorAll('.modal'); const addMemberBtn = document.getElementById('add-member-btn'); const memberModal = document.getElementById('member-form-modal'); const memberForm = document.getElementById('member-form'); const memberListDiv = document.getElementById('member-list'); const memberFormTitle = document.getElementById('member-form-title'); const hiddenMemberIdInput = document.getElementById('member-id'); const addAnimationBtn = document.getElementById('add-animation-btn'); const animationModal = document.getElementById('animation-form-modal'); const animationForm = document.getElementById('animation-form'); const animationListDiv = document.getElementById('animation-list'); const animationFormTitle = document.getElementById('animation-form-title'); const animationParticipantsDiv = document.getElementById('animation-participants-list'); const hiddenAnimationIdInput = document.getElementById('animation-id'); const animationStatusFilterSelect = document.getElementById('animation-status-filter'); const animationTypeSelect = document.getElementById('animation-type'); const animationViewFilterSelect = document.getElementById('animation-view-filter'); const animationDetailModal = document.getElementById('animation-detail-modal'); const animationDetailContent = document.getElementById('animation-detail-content'); const detailModalTitle = document.getElementById('detail-modal-title'); const editFromDetailBtn = document.getElementById('edit-from-detail-btn'); const addTaskBtn = document.getElementById('add-task-btn'); const taskModal = document.getElementById('task-form-modal'); const taskForm = document.getElementById('task-form'); const taskListDiv = document.getElementById('task-list'); const taskFormTitle = document.getElementById('task-form-title'); const taskFilterAnimationSelect = document.getElementById('task-filter-animation'); const taskAnimationSelect = document.getElementById('task-animation'); const taskAssigneesDiv = document.getElementById('task-assignees-list'); const hiddenTaskIdInput = document.getElementById('task-id'); const taskListModal = document.getElementById('task-list-modal'); const modalTaskTitle = document.getElementById('modal-task-title'); const modalTaskContent = document.getElementById('modal-task-content'); const upcomingCountEl = document.getElementById('upcoming-animations-count'); const upcomingListEl = document.getElementById('upcoming-animations-list'); const ongoingCountEl = document.getElementById('ongoing-tasks-count'); const ongoingListEl = document.getElementById('ongoing-tasks-list'); const deadlinesListEl = document.getElementById('deadlines-list'); const plannedBudgetTotalEl = document.getElementById('planned-budget-total'); const budgetDetailsInfoEl = document.getElementById('budget-details-info'); const overdueTasksBadgeEl = document.getElementById('overdue-tasks-badge'); const remainingAnnualBudgetEl = document.getElementById('remaining-annual-budget'); const remainingBudgetDetailsEl = document.getElementById('remaining-budget-details'); const budgetChartErrorEl = document.getElementById('dashboard-budget-error'); const calendarContainerEl = document.getElementById('dashboard-calendar'); const calendarMessageEl = document.querySelector('#dashboard-calendar-wrapper .calendar-loading-message'); const statsTotalCompletedEl = document.getElementById('stats-total-completed'); const statsAvgParticipationEl = document.getElementById('stats-avg-participation'); const statsTotalBudgetSpentEl = document.getElementById('stats-total-budget-spent'); const statusErrorEl = document.getElementById('stats-status-error'); const typeErrorEl = document.getElementById('stats-type-error'); const participationErrorEl = document.getElementById('stats-participation-error'); const exportCsvBtn = document.getElementById('export-csv-btn'); const loginBtn = document.getElementById('login-btn'); const logoutBtn = document.getElementById('logout-btn'); const userInfoDiv = document.getElementById('user-info'); const userNameSpan = document.getElementById('user-name'); const userPhotoImg = document.getElementById('user-photo');
+    // #endregion
 
-     /* Rayons de bordure */
-     --border-radius-small: 6px;
-     --border-radius-medium: 10px;
-     --border-radius-large: 12px;
+    // #region Variables d'État, Cache et Instances
+    let editingMemberId = null; let editingAnimationId = null; let editingTaskId = null; let currentUser = null; let currentDetailAnimationId = null; let cachedMembers = []; let membersLoaded = false; let cachedAnimations = []; let animationsLoaded = false; let cachedTasks = []; let tasksLoaded = false; let cachedDocuments = []; let documentsLoaded = false; let isInitialLoadComplete = false; let initialLoadPromise = null; let resolveInitialLoad; const resetInitialLoadPromise = () => { initialLoadPromise = new Promise(resolve => { resolveInitialLoad = resolve; }); isInitialLoadComplete = false; }; resetInitialLoadPromise(); let statusChartInstance = null; let typeChartInstance = null; let participationChartInstance = null; let dashboardBudgetChartInstance = null; let dashboardCalendarInstance = null;
+    // #endregion
 
-     /* Dimensions Header/Footer */
-     --header-height: 65px;
-}
+    // #region Fonctions Utilitaires
+    const openModal = (modal) => { if (modal) modal.style.display = 'block'; };
+    const closeModal = (modal) => { if (!modal) return; modal.style.display = 'none'; if (modal === memberModal && memberForm) { memberForm.reset(); editingMemberId = null; if (memberFormTitle) memberFormTitle.textContent = "Ajouter Membre"; if (hiddenMemberIdInput) hiddenMemberIdInput.value = ''; } else if (modal === animationModal && animationForm) { animationForm.reset(); editingAnimationId = null; if (animationFormTitle) animationFormTitle.textContent = "Ajouter Animation"; if (hiddenAnimationIdInput) hiddenAnimationIdInput.value = ''; if (animationParticipantsDiv) animationParticipantsDiv.innerHTML = '<p>Chargement...</p>'; } else if (modal === taskModal && taskForm) { taskForm.reset(); editingTaskId = null; if (taskFormTitle) taskFormTitle.textContent = "Ajouter Tâche"; if (hiddenTaskIdInput) hiddenTaskIdInput.value = ''; if (taskAnimationSelect) taskAnimationSelect.value = ""; if (taskAssigneesDiv) taskAssigneesDiv.innerHTML = '<p>Chargement...</p>'; const budgetInput = document.getElementById('task-budget'); if(budgetInput) budgetInput.value = ''; } else if (modal === taskListModal) { if (modalTaskTitle) modalTaskTitle.textContent = "Tâches"; if (modalTaskContent) modalTaskContent.innerHTML = '<p>Chargement...</p>'; } else if (modal === animationDetailModal) { if (animationDetailContent) animationDetailContent.innerHTML = '<p>Chargement...</p>'; if (detailModalTitle) detailModalTitle.textContent = "Détail de l'Animation"; currentDetailAnimationId = null; } };
+    const escapeCsvValue = (value) => { const stringValue = String(value ?? ''); if (/[";\n]/.test(stringValue)) { return `"${stringValue.replace(/"/g, '""')}"`; } return stringValue; };
+    const animateCardEntry = (cardElement, delay) => { if (!cardElement) return; requestAnimationFrame(() => { requestAnimationFrame(() => { cardElement.style.transitionDelay = `${delay}ms`; cardElement.classList.remove('card-hidden'); cardElement.addEventListener('transitionend', () => { cardElement.style.transitionDelay = ''; }, { once: true }); }); }); };
+    const getDateValueInMillis = (dateFieldValue) => { if (!dateFieldValue) return Infinity; if (typeof dateFieldValue.toDate === 'function') { try { const d = dateFieldValue.toDate(); return (d instanceof Date && !isNaN(d.getTime())) ? d.getTime() : Infinity; } catch (e) { return Infinity; } } try { const d = new Date(dateFieldValue); return (d instanceof Date && !isNaN(d.getTime())) ? d.getTime() : Infinity; } catch (e) { return Infinity; } };
+    const calculateAnimationBudget = (animationId) => { if (!tasksLoaded || !animationId) return 0; let totalBudget = 0; cachedTasks.filter(task => task.animationId === animationId).forEach(task => { if (typeof task.budget === 'number' && !isNaN(task.budget) && task.budget > 0) { totalBudget += task.budget; } }); return totalBudget; };
+    function getDocumentThumbnailInfo(docUrl, docType) { let thumbnailUrl = null; let isDirectImageLink = false; const imageTypes = ['affiche']; const isImageType = imageTypes.includes(docType); let placeholderIcon = 'fa-file'; if (isImageType && docUrl) { try { const urlObj = new URL(docUrl); if (urlObj.hostname === 'i.imgur.com') { const parts = docUrl.split('.'); if (parts.length > 1) { const ext = parts.pop(); const base = parts.join('.'); thumbnailUrl = base.endsWith('s') ? docUrl : `${base}s.${ext}`; isDirectImageLink = true; } } else if (/\.(jpg|jpeg|png|gif|webp|avif)$/i.test(docUrl)) { thumbnailUrl = docUrl; isDirectImageLink = true; } } catch (e) {} } if (!thumbnailUrl) { if (docType === 'facture') placeholderIcon = 'fa-file-invoice-dollar'; else if (docType === 'affiche') placeholderIcon = 'fa-file-image'; else if (docType === 'compte-rendu') placeholderIcon = 'fa-file-lines'; else placeholderIcon = 'fa-file-alt'; } return { thumbnailUrl, isDirectImageLink, placeholderIcon }; }
+    // #endregion
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+    // #region Logique de Navigation
+    const navigateTo = (pageId, updateHistory = true) => { pages.forEach(p => p.classList.remove('active')); const targetPage = document.getElementById(pageId); if (targetPage) { targetPage.classList.add('active'); } else { console.warn(`Page ID "${pageId}" introuvable. Affichage Dashboard.`); document.getElementById('dashboard')?.classList.add('active'); pageId = 'dashboard'; } navLinks.forEach(l => l.classList.remove('active')); const activeLink = document.querySelector(`.nav-link[href="#${pageId}"]`); if (activeLink) { activeLink.classList.add('active'); } else { document.querySelector(`.nav-link[href="#dashboard"]`)?.classList.add('active'); } if (updateHistory && window.location.hash !== `#${pageId}`) { window.location.hash = pageId; } console.log(`Navigation vers: ${pageId}`); ensureCacheAndRender(pageId); };
+    const ensureCacheAndRender = async (pageId) => { if (!currentUser && pageId !== 'dashboard') { console.log(`Render annulé pour ${pageId} (utilisateur déconnecté)`); const targetPage = document.getElementById(pageId); if (targetPage) targetPage.innerHTML = '<p style="text-align:center; margin-top: 30px; color: var(--danger-color);">Veuillez vous connecter pour accéder à cette section.</p>'; return; } if (currentUser) { try { console.log(`Vérification chargement initial pour ${pageId}...`); await initialLoadPromise; console.log(`Chargement initial terminé pour ${pageId}.`); if (!isInitialLoadComplete && pageId !== 'dashboard') { console.error("ERREUR LOGIQUE: Promesse résolue mais isInitialLoadComplete est false!"); throw new Error("Incohérence état chargement initial."); } } catch (waitError) { console.error(`Erreur pendant l'attente de initialLoadPromise pour ${pageId}:`, waitError); const targetPage = document.getElementById(pageId); if (targetPage) targetPage.innerHTML = `<p class="error-message" style="text-align:center; margin-top: 30px; color: var(--danger-color);">Erreur lors de la préparation de l'affichage (${waitError.message}).</p>`; return; } } console.log(`Lancement rendu pour page: ${pageId}`); try { switch (pageId) { case 'members': await loadMembersIntoCache(); renderMembers(); break; case 'animations': await Promise.all([loadAnimationsIntoCache(), loadTasksIntoCache(), loadDocumentsIntoCache()]); renderAnimations(); break; case 'tasks': await Promise.all([loadMembersIntoCache(), loadAnimationsIntoCache(), loadTasksIntoCache()]); populateTaskFilterDropdown(); renderTasks(); break; case 'dashboard': await Promise.all([loadMembersIntoCache(), loadAnimationsIntoCache(), loadTasksIntoCache()]); renderDashboard(); break; case 'stats': await Promise.all([loadMembersIntoCache(), loadAnimationsIntoCache(), loadTasksIntoCache()]); renderStats(); break; case 'documents': if (typeof initDocumentsPage === 'function') { await Promise.all([loadAnimationsIntoCache(), loadTasksIntoCache(), loadDocumentsIntoCache()]); initDocumentsPage( db, currentUser, async () => { await loadTasksIntoCache(); return cachedTasks; }, async () => { await loadAnimationsIntoCache(); return cachedAnimations; }, openModal, closeModal, animateCardEntry ); } else { console.error("La fonction initDocumentsPage n'est pas définie..."); const docPage = document.getElementById('documents'); if (docPage) docPage.innerHTML = '<p class="error-message">Erreur chargement module documents.</p>'; } break; default: console.log(`Pas de rendu spécifique pour ${pageId}.`); break; } } catch (error) { console.error(`Erreur lors du rendu pour la page ${pageId}:`, error); const targetPage = document.getElementById(pageId); if (targetPage) targetPage.innerHTML = `<p class="error-message" style="text-align:center; margin-top: 30px; color: var(--danger-color);">Erreur lors du chargement de cette section (${error.message}).</p>`; } };
+    // #endregion
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    line-height: 1.6;
-}
-/* #endregion */
+    // #region Gestion du Cache
+    const loadMembersIntoCache = async (forceReload = false) => { if (!currentUser) { console.warn("Chargement membres annulé (déconnecté)"); cachedMembers = []; membersLoaded = false; return; } if (membersLoaded && !forceReload) return; try { console.log("Firestore: Chargement Membres..."); const snapshot = await membersCollection.orderBy("lastname", "asc").get(); cachedMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); membersLoaded = true; console.log("Cache Membres OK:", cachedMembers.length); } catch (error) { console.error("Erreur chargement cache membres:", error); membersLoaded = false; cachedMembers = []; throw error; } };
+    const loadAnimationsIntoCache = async (forceReload = false) => { if (!currentUser) { console.warn("Chargement animations annulé (déconnecté)"); cachedAnimations = []; animationsLoaded = false; return; } if (animationsLoaded && !forceReload) return; try { console.log("Firestore: Chargement Animations..."); const snapshot = await animationsCollection.orderBy("dateTime", "desc").get(); cachedAnimations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); animationsLoaded = true; console.log("Cache Animations OK:", cachedAnimations.length); } catch (error) { console.error("Erreur chargement cache animations:", error); animationsLoaded = false; cachedAnimations = []; throw error; } };
+    const loadTasksIntoCache = async (forceReload = false) => { if (!currentUser) { console.warn("Chargement tâches annulé (déconnecté)"); cachedTasks = []; tasksLoaded = false; return; } if (tasksLoaded && !forceReload) return; try { console.log("Firestore: Chargement Tâches..."); const snapshot = await tasksCollection.get(); cachedTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); tasksLoaded = true; console.log("Cache Tâches OK:", cachedTasks.length); } catch (error) { console.error("Erreur chargement cache tâches:", error); tasksLoaded = false; cachedTasks = []; throw error; } };
+    const loadDocumentsIntoCache = async (forceReload = false) => { if (!currentUser) { console.warn("Chargement documents annulé (déconnecté)"); cachedDocuments = []; documentsLoaded = false; return; } if (documentsLoaded && !forceReload) return; try { console.log("Firestore: Chargement Documents..."); const snapshot = await documentsCollection.orderBy("uploadDate", "desc").get(); cachedDocuments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); documentsLoaded = true; console.log("Cache Documents OK:", cachedDocuments.length); } catch (error) { console.error("Erreur chargement cache documents:", error); documentsLoaded = false; cachedDocuments = []; throw error; } };
+    const loadAllCaches = async (forceReload = false) => { if (!currentUser) { console.log("Chargement global annulé (déco)"); isInitialLoadComplete = false; return; } console.log("Chargement de tous les caches..."); try { await Promise.all([ loadMembersIntoCache(forceReload), loadAnimationsIntoCache(forceReload), loadTasksIntoCache(forceReload), loadDocumentsIntoCache(forceReload) ]); isInitialLoadComplete = true; console.log("Chargement global OK."); } catch (error) { console.error("Erreur critique chargement global:", error); isInitialLoadComplete = false; throw error; } };
+    const clearAllCaches = () => { cachedMembers = []; membersLoaded = false; cachedAnimations = []; animationsLoaded = false; cachedTasks = []; tasksLoaded = false; cachedDocuments = []; documentsLoaded = false; isInitialLoadComplete = false; console.log("Caches vidés."); };
+    // #endregion
 
-/* #region --- Structure Globale & Layout --- */
-.site-wrapper {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
+    // #region Fonctions pour Dropdowns et Checkboxes
+    const populateMemberOptions = (selectEl, selectedId = '') => { if (!selectEl) return; const currentVal = selectEl.value; selectEl.innerHTML = '<option value="">-- Choisir --</option>'; if (membersLoaded && cachedMembers.length > 0) { cachedMembers.forEach(m => { const opt = document.createElement('option'); opt.value = m.id; opt.textContent = `${m.firstname} ${m.lastname}`; selectEl.appendChild(opt); }); selectEl.value = selectedId || (cachedMembers.some(m => m.id === currentVal) ? currentVal : ""); } else { console.warn("Impossible de peupler les membres (cache vide ou non chargé)."); } };
+    const populateAnimationOptions = (selectEl, selectedId = '', addAllOption = false) => { if (!selectEl) return; const currentVal = selectEl.value; selectEl.innerHTML = ''; if (addAllOption) { const allOpt = document.createElement('option'); allOpt.value = 'all'; allOpt.textContent = 'Toutes les animations'; selectEl.appendChild(allOpt); } else { selectEl.innerHTML = '<option value="">-- Choisir une animation --</option>'; } if (animationsLoaded && cachedAnimations.length > 0) { const sortedAnimations = [...cachedAnimations].sort((a, b) => (a.title || '').localeCompare(b.title || '')); sortedAnimations.forEach(a => { const opt = document.createElement('option'); opt.value = a.id; opt.textContent = a.title || 'Animation sans titre'; selectEl.appendChild(opt); }); if (selectedId) { selectEl.value = selectedId; } else if (addAllOption) { selectEl.value = currentVal === 'all' ? 'all' : 'all'; } else { selectEl.value = cachedAnimations.some(a => a.id === currentVal) ? currentVal : ""; } } else { console.warn("Impossible de peupler les animations (cache vide ou non chargé)."); } };
+    const populateTaskFilterDropdown = () => { if (!taskFilterAnimationSelect) { console.warn("Élément #task-filter-animation non trouvé."); return; } populateAnimationOptions(taskFilterAnimationSelect, taskFilterAnimationSelect.value || 'all', true); };
+    const renderMemberCheckboxesForTask = async (selectedIds = []) => { if (!taskAssigneesDiv) { console.error("DOM Error: #task-assignees-list not found"); return; } taskAssigneesDiv.innerHTML = '<p>Chargement des membres...</p>'; try { await loadMembersIntoCache(); if (!membersLoaded || cachedMembers.length === 0) { taskAssigneesDiv.innerHTML = '<p>Aucun membre disponible.</p>'; return; } taskAssigneesDiv.innerHTML = ''; cachedMembers.forEach(member => { const isChecked = selectedIds.includes(member.id); const label = document.createElement('label'); label.innerHTML = `<input type="checkbox" name="taskAssignees" value="${member.id}" ${isChecked ? 'checked' : ''}> `; label.appendChild(document.createTextNode(`${member.firstname} ${member.lastname}`)); taskAssigneesDiv.appendChild(label); }); } catch (error) { console.error("Erreur rendu checkboxes tâche:", error); taskAssigneesDiv.innerHTML = '<p style="color:red">Erreur lors du chargement des membres.</p>'; } };
+    const renderMemberCheckboxes = async (selectedIds = []) => { if (!animationParticipantsDiv) { console.error("DOM Error: #animation-participants-list not found"); return; } animationParticipantsDiv.innerHTML = '<p>Chargement des membres...</p>'; try { await loadMembersIntoCache(); if (!membersLoaded || cachedMembers.length === 0) { animationParticipantsDiv.innerHTML = '<p>Aucun membre disponible.</p>'; return; } animationParticipantsDiv.innerHTML = ''; cachedMembers.forEach(member => { const isChecked = selectedIds.includes(member.id); const label = document.createElement('label'); label.innerHTML = `<input type="checkbox" name="participants" value="${member.id}" ${isChecked ? 'checked' : ''}> `; label.appendChild(document.createTextNode(`${member.firstname} ${member.lastname}`)); animationParticipantsDiv.appendChild(label); }); } catch (error) { console.error("Erreur rendu checkboxes animation:", error); animationParticipantsDiv.innerHTML = '<p style="color:red">Erreur chargement membres.</p>'; } };
+    // #endregion
 
-/* Header */
-.app-header {
-    background-color: var(--header-bg);
-    height: var(--header-height);
-    padding: 0 25px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: var(--shadow); /* Ombre plus douce pour header */
-    position: sticky;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1001;
-    border-bottom: 1px solid var(--border-color);
-}
-.header-brand {
-    display: flex;
-    align-items: center;
-}
-#header-logo {
-    height: 40px;
-    max-height: 80%;
-    width: auto;
-    margin-right: 15px;
-}
-.app-header h1 {
-    font-size: 1.3em;
-    color: var(--primary-color);
-    margin: 0;
-    white-space: nowrap;
-}
-.app-header h1 i {
-    margin-right: 8px;
-}
-.header-nav ul {
-    list-style: none;
-    display: flex;
-    gap: 5px;
-    margin: 0;
-    padding: 0;
-}
-.header-nav li { margin: 0; }
-.header-nav a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    color: var(--text-muted);
-    text-decoration: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-.header-nav a i { font-size: 1.1em; margin: 0; }
-.header-nav a .nav-text { display: none; }
-.header-nav a:hover { background-color: var(--hover-light); color: var(--primary-color); }
-.header-nav a.active { background-color: var(--primary-color); color: var(--text-light); }
-.header-auth { display: flex; align-items: center; }
+    // #region Fonctions de Rendu (Affichage)
+    const renderMembers = async () => { if (!memberListDiv) { console.error("DOM Error: #member-list not found"); return; } if (!currentUser) { memberListDiv.innerHTML = '<p>Veuillez vous connecter pour voir les membres.</p>'; return; } memberListDiv.innerHTML = '<p>Chargement des membres...</p>'; try { if (!membersLoaded) await loadMembersIntoCache(); if (!membersLoaded || cachedMembers.length === 0) { memberListDiv.innerHTML = '<p>Aucun membre COPIL ajouté pour le moment.</p>'; return; } memberListDiv.innerHTML = ''; cachedMembers.forEach((member, index) => { const memberId = member.id; const div = document.createElement('div'); div.className = 'member-card card-hidden'; div.setAttribute('data-id', memberId); div.innerHTML = ` <div class="card-body"> <h3 class="member-name">${member.firstname || ''} ${member.lastname || ''}</h3> <p class="member-detail"> <i class="fas fa-user-tag"></i> <span>Rôle: ${member.role || 'N/A'}</span> </p> <p class="member-detail"> <i class="fas fa-envelope"></i> <span>Contact: ${member.contact || 'N/A'}</span> </p> </div> <div class="card-footer"> <button class="btn secondary-btn edit-btn" title="Modifier"><i class="fas fa-edit"></i></button> <button class="btn danger-btn delete-btn" title="Supprimer"><i class="fas fa-trash"></i></button> </div>`; memberListDiv.appendChild(div); animateCardEntry(div, index * 50); const editBtn = div.querySelector('.edit-btn'); if (editBtn) editBtn.addEventListener('click', () => handleEditMember(memberId)); const deleteBtn = div.querySelector('.delete-btn'); if (deleteBtn) deleteBtn.addEventListener('click', () => handleDeleteMember(memberId)); }); } catch (error) { console.error("Erreur rendu membres:", error); memberListDiv.innerHTML = '<p class="error-message">Erreur lors du chargement des membres.</p>'; } };
+    const renderAnimations = async () => { if (!animationListDiv) { console.error("DOM Error: #animation-list non trouvé"); return; } if (!currentUser) { animationListDiv.innerHTML = '<p>Veuillez vous connecter pour voir les animations.</p>'; return; } animationListDiv.innerHTML = '<p>Chargement des animations...</p>'; const selectedView = animationViewFilterSelect?.value || 'all'; const selectedStatus = animationStatusFilterSelect?.value || 'all'; console.log(`--- Début renderAnimations (avec miniature) ---`); console.log(`Filtres Demandés: Vue='${selectedView}', Statut='${selectedStatus}'`); try { if (!animationsLoaded || !tasksLoaded || !documentsLoaded) { await Promise.all([ loadAnimationsIntoCache(true), loadTasksIntoCache(true), loadDocumentsIntoCache(true) ]); if (!animationsLoaded || !tasksLoaded || !documentsLoaded) throw new Error("Données cache manquantes pour rendu animations."); } console.log(`Cache Initial Anim (${cachedAnimations.length}), Tâches (${cachedTasks.length}), Docs (${cachedDocuments.length})`); let filteredList = [...cachedAnimations]; if (selectedView === 'active') { filteredList = filteredList.filter(a => a.status === 'prévue' || a.status === 'en cours'); } else if (selectedView === 'archived') { filteredList = filteredList.filter(a => a.status === 'réalisée' || a.status === 'annulée'); } if (selectedStatus !== 'all') { filteredList = filteredList.filter(a => a.status === selectedStatus); } const animationsToRender = filteredList; animationsToRender.sort((a, b) => getDateValueInMillis(b.dateTime) - getDateValueInMillis(a.dateTime)); if (animationsToRender.length === 0) { let message = "Aucune animation trouvée"; if (selectedView !== 'all' || selectedStatus !== 'all') { message += ` correspondant aux filtres.`; } else { message += "."; } animationListDiv.innerHTML = `<p>${message}</p>`; } else { animationListDiv.innerHTML = ''; animationsToRender.forEach((animation, index) => { const animationId = animation.id; const div = document.createElement('div'); const statusClass = (animation.status || 'prévue').replace(/\s+/g, '-').toLowerCase(); div.className = `animation-card status-${statusClass} card-hidden`; div.setAttribute('data-id', animationId); const relatedPoster = cachedDocuments.find(doc => doc.linkedToId === animationId && doc.type === 'affiche'); let thumbnailHtml = ''; if (relatedPoster) { const thumbInfo = getDocumentThumbnailInfo(relatedPoster.url, relatedPoster.type); const placeholderOnError = "this.onerror=null; this.parentElement.innerHTML = `<i class='fas fa-image fa-3x text-muted' title='Erreur chargement image'></i>`;"; thumbnailHtml = `<div class="anim-thumbnail">${thumbInfo.thumbnailUrl ? `<img src="${thumbInfo.thumbnailUrl}" alt="Affiche" loading="lazy" onerror="${placeholderOnError}">` : `<i class="fas ${thumbInfo.placeholderIcon} fa-3x"></i>`}</div>`; } let dateStr = 'N/A', timeStr = ''; try { if (animation.dateTime?.toDate) { const d = animation.dateTime.toDate(); if (d instanceof Date && !isNaN(d)) { dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }); timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); } } } catch (e) { dateStr = 'Err'; } const animType = animation.animationType || 'N/D'; const location = animation.location || 'N/A'; const statusText = animation.status || 'N/A'; const docsCount = (Array.isArray(animation.documentLinks) ? animation.documentLinks : []).length; const participantsCount = (Array.isArray(animation.participantIds) ? animation.participantIds : []).length; const participantText = `${participantsCount} Part${participantsCount !== 1 ? 's.' : '.'}`; const docText = `${docsCount} Doc${docsCount !== 1 ? 's.' : '.'}`; const description = animation.description || ''; const calculatedBudget = calculateAnimationBudget(animationId); const budgetDisplay = calculatedBudget > 0 ? `${calculatedBudget.toLocaleString('fr-FR')} €` : 'N/D'; div.innerHTML = `<div class="card-header"><h3>${animation.title || 'Animation sans titre'}</h3></div> <div class="card-body anim-card-body">${thumbnailHtml}<div class="anim-info"><div class="card-details-row compact"><span class="detail-item date"><i class="fas fa-calendar-day"></i> ${dateStr} ${timeStr ? ' - ' + timeStr : ''}</span><span class="detail-item type"><i class="fas fa-tags"></i> ${animType}</span><span class="detail-item location" title="${location}"><i class="fas fa-map-marker-alt"></i> ${location}</span></div><div class="card-details-row secondary"><span class="detail-item status"><i class="fas fa-info-circle"></i> ${statusText}</span><span class="detail-item budget"><i class="fas fa-euro-sign"></i> ${budgetDisplay}</span><span class="detail-item participants"><i class="fas fa-users"></i> ${participantText}</span><span class="detail-item docs"><i class="fas fa-paperclip"></i> ${docText}</span></div> ${description ? `<p class="card-description" title="${description}">${description}</p>` : '<p class="card-description no-description"><i>Aucune description.</i></p>'}</div></div> <div class="card-footer"><button class="btn secondary-btn show-tasks-btn" title="Voir tâches"><i class="fas fa-list-check"></i></button><button class="btn secondary-btn edit-btn" title="Modifier"><i class="fas fa-edit"></i></button><button class="btn danger-btn delete-btn" title="Supprimer"><i class="fas fa-trash"></i></button></div>`; animationListDiv.appendChild(div); if (typeof _animateCardEntry === 'function') _animateCardEntry(div, index * 50); else div.classList.remove('card-hidden'); const showTasksBtn = div.querySelector('.show-tasks-btn'); if (showTasksBtn) showTasksBtn.addEventListener('click', () => handleShowAnimationTasks(animationId, animation.title)); const editBtn = div.querySelector('.edit-btn'); if (editBtn) editBtn.addEventListener('click', () => handleEditAnimation(animationId)); const deleteBtn = div.querySelector('.delete-btn'); if (deleteBtn) deleteBtn.addEventListener('click', () => handleDeleteAnimation(animationId)); }); } } catch (error) { console.error("Erreur globale dans renderAnimations:", error); animationListDiv.innerHTML = `<p class="error-message">Erreur affichage animations: ${error.message}</p>`; } console.log(`--- Fin renderAnimations ---`); };
+    const renderTasks = async () => { if (!taskListDiv) { console.error("DOM Error: #task-list not found"); return; } if (!currentUser) { taskListDiv.innerHTML = '<p>Veuillez vous connecter.</p>'; return; } taskListDiv.innerHTML = '<p>Chargement...</p>'; if (!membersLoaded || !animationsLoaded || !tasksLoaded) { console.warn("renderTasks: Cache non prêt."); taskListDiv.innerHTML = '<p class="error-message">Erreur chargement données.</p>'; return; } const selectedAnimId = taskFilterAnimationSelect?.value || 'all'; try { let filteredTasks = cachedTasks; if (selectedAnimId !== 'all') { filteredTasks = cachedTasks.filter(t => t.animationId === selectedAnimId); } filteredTasks.sort((a, b) => getDateValueInMillis(a.dueDate) - getDateValueInMillis(b.dueDate)); if (filteredTasks.length === 0) { taskListDiv.innerHTML = `<p>Aucune tâche trouvée ${selectedAnimId !== 'all' ? 'pour cette animation': ''}.</p>`; return; } taskListDiv.innerHTML = ''; filteredTasks.forEach((task, index) => { const taskId = task.id; const animation = cachedAnimations.find(a => a.id === task.animationId); const div = document.createElement('div'); const statusClass = (task.status || 'à faire').replace(/\s+/g, '-').toLowerCase(); div.className = `task-card status-${statusClass} card-hidden`; div.setAttribute('data-id', taskId); let dateStr = 'N/A', overdueHtml = ''; try { const dueDateMs = getDateValueInMillis(task.dueDate); if (dueDateMs !== Infinity) { const d = new Date(dueDateMs); dateStr = d.toLocaleDateString('fr-FR', { year:'numeric', month:'short', day:'numeric'}); if (task.status !== 'terminé' && d.getTime() < Date.now() - 864e5) overdueHtml = ' <span style="color: var(--danger-color); font-weight: bold;">(Retard)</span>'; } } catch (e) { dateStr = 'Err'; } const assigneeIds = Array.isArray(task.assigneeIds) ? task.assigneeIds : []; let assigneesText = 'N/A'; if (assigneeIds.length > 0 && membersLoaded) { assigneesText = assigneeIds.map(id => { const m = cachedMembers.find(m => m.id === id); return m ? `${m.firstname.charAt(0)}. ${m.lastname}` : '?'; }).join(', '); } else if (assigneeIds.length > 0) { assigneesText = `${assigneeIds.length} assigné(s)`; } const animationTitle = animation ? (animation.title || 'Anim. liée') : 'Anim. N/A'; const taskBudget = (task.budget != null && !isNaN(task.budget)) ? `${Number(task.budget).toLocaleString('fr-FR')} €` : ''; const budgetHtml = taskBudget ? `<div class="card-detail"><i class="fas fa-euro-sign" style="color: var(--warning-color);"></i><span>${taskBudget}</span></div>` : ''; div.innerHTML = `<div class="card-body"> <p class="task-description">${task.description || 'N/A'}</p> <div class="card-detail" title="Liée à: ${animationTitle}"><i class="fas fa-link"></i><span>${animationTitle}</span></div> <div class="card-detail" title="Assigné(s): ${assigneesText}"><i class="fas fa-users"></i><span>${assigneesText}</span></div> <div class="card-detail"><i class="fas fa-clock"></i><span>Éch: ${dateStr}${overdueHtml}</span></div> <div class="card-detail"><i class="fas fa-info-circle"></i><span>${task.status || 'N/A'}</span></div> ${budgetHtml} </div> <div class="card-footer"> <button class="btn secondary-btn edit-btn" title="Modifier"><i class="fas fa-edit"></i></button> <button class="btn danger-btn delete-btn" title="Supprimer"><i class="fas fa-trash"></i></button> </div>`; taskListDiv.appendChild(div); animateCardEntry(div, index * 50); const editBtn = div.querySelector('.edit-btn'); if(editBtn) editBtn.addEventListener('click', () => handleEditTask(taskId)); const deleteBtn = div.querySelector('.delete-btn'); if(deleteBtn) deleteBtn.addEventListener('click', () => handleDeleteTask(taskId)); }); } catch (error) { console.error("Erreur rendu tâches:", error); taskListDiv.innerHTML = '<p class="error-message">Erreur chargement tâches.</p>'; } };
+    const renderDashboard = async () => { console.log("--- Début Exécution renderDashboard ---"); const budgetChartCtx = document.getElementById('dashboard-budget-chart')?.getContext('2d'); const calendarEl = document.getElementById('dashboard-calendar'); const setLoadingState = (el, text = '...') => { if (el) el.textContent = text; }; const setListLoadingState = (listEl, text = '<li>Chargement...</li>') => { if (listEl) listEl.innerHTML = text; }; const setChartError = (errorEl, message, isError = false) => { if (!errorEl) return; errorEl.textContent = message; errorEl.style.display = message ? 'block' : 'none'; errorEl.style.color = isError ? 'var(--danger-color)' : '#777'; errorEl.classList.toggle('error', isError); }; const setCalendarMessage = (message, isError = false) => { if (!calendarMessageEl) return; calendarMessageEl.textContent = message; calendarMessageEl.style.display = message ? 'block' : 'none'; calendarMessageEl.style.color = isError ? 'var(--danger-color)' : '#777'; calendarMessageEl.classList.toggle('error', isError); if(calendarEl) calendarEl.style.display = message ? 'none' : 'block'; }; if (dashboardBudgetChartInstance) { dashboardBudgetChartInstance.destroy(); dashboardBudgetChartInstance = null; } if (dashboardCalendarInstance) { try { dashboardCalendarInstance.destroy(); } catch (e) {} dashboardCalendarInstance = null; } console.log(`renderDashboard: currentUser? ${!!currentUser}`); if (!currentUser) { console.log("renderDashboard: Affichage état déconnecté."); setListLoadingState(upcomingListEl, ''); setLoadingState(upcomingCountEl, '-'); setListLoadingState(ongoingListEl, ''); setLoadingState(ongoingCountEl, '-'); setListLoadingState(deadlinesListEl, ''); if (overdueTasksBadgeEl) overdueTasksBadgeEl.style.display = 'none'; setLoadingState(plannedBudgetTotalEl, '-'); setLoadingState(budgetDetailsInfoEl, 'Connectez-vous'); setLoadingState(remainingAnnualBudgetEl, '-'); setLoadingState(remainingBudgetDetailsEl, 'Connectez-vous'); setChartError(budgetChartErrorEl, 'Connectez-vous pour voir le graphique.'); setCalendarMessage('Connectez-vous pour voir le calendrier.'); return; } console.log(`renderDashboard: État caches: initialLoadComplete=${isInitialLoadComplete}, members=${membersLoaded}, anims=${animationsLoaded}, tasks=${tasksLoaded}, docs=${documentsLoaded}`); if (!isInitialLoadComplete || !membersLoaded || !animationsLoaded || !tasksLoaded) { console.warn("renderDashboard: APPELÉ ALORS QUE LES DONNÉES NE SONT PAS PRÊTES ! (Sortie prématurée)"); setLoadingState(upcomingCountEl, '...'); setListLoadingState(upcomingListEl, '<li>Attente données...</li>'); setLoadingState(ongoingCountEl, '...'); setListLoadingState(ongoingListEl, '<li>Attente données...</li>'); setListLoadingState(deadlinesListEl, '<li>Attente données...</li>'); if (overdueTasksBadgeEl) overdueTasksBadgeEl.style.display = 'none'; setLoadingState(plannedBudgetTotalEl, '...'); setLoadingState(budgetDetailsInfoEl, 'Attente données...'); setLoadingState(remainingAnnualBudgetEl, '...'); setLoadingState(remainingBudgetDetailsEl, 'Attente données...'); setChartError(budgetChartErrorEl, 'Attente données graphiques...'); setCalendarMessage('Attente données calendrier...'); return; } console.log("renderDashboard: Données caches prêtes, début du traitement."); setLoadingState(upcomingCountEl); setListLoadingState(upcomingListEl); setLoadingState(ongoingCountEl); setListLoadingState(ongoingListEl); setListLoadingState(deadlinesListEl); if (overdueTasksBadgeEl) overdueTasksBadgeEl.style.display = 'none'; setLoadingState(plannedBudgetTotalEl); setLoadingState(budgetDetailsInfoEl, 'Calcul...'); setLoadingState(remainingAnnualBudgetEl); setLoadingState(remainingBudgetDetailsEl, 'Calcul...'); setChartError(budgetChartErrorEl, 'Calcul graphique...'); setCalendarMessage('Préparation calendrier...'); const now = new Date(); const currentYear = now.getFullYear(); const nowTime = now.getTime(); const sevenDays = nowTime + 7 * 24 * 60 * 60 * 1000;
+        console.log("renderDashboard: Calcul Animations à venir..."); if (upcomingCountEl && upcomingListEl) { try { const upcoming = cachedAnimations.filter(a => { const isP = a.status === 'prévue'; let isValidDate = false, isFuture = false; if (a.dateTime?.toDate) { try { const d = a.dateTime.toDate(); isValidDate = d instanceof Date && !isNaN(d); if (isValidDate) isFuture = d.getTime() >= nowTime; } catch (e) {} } return isP && isValidDate && isFuture; }).sort((a, b) => getDateValueInMillis(a.dateTime) - getDateValueInMillis(b.dateTime)); upcomingCountEl.textContent = upcoming.length; upcomingListEl.innerHTML = upcoming.length === 0 ? '<li class="no-items">Aucune animation à venir</li>' : upcoming.slice(0, 4).map(a => { let date = 'Err'; try { const d = a.dateTime.toDate(); if (d instanceof Date && !isNaN(d)) date = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }); } catch (e) {} return `<li><span class="dashboard-date">${date}</span> ${a.title || 'N/A'}</li>` }).join(''); } catch (e) { console.error("Erreur Bloc Upcoming Anims:", e); if (upcomingListEl) upcomingListEl.innerHTML = '<li class="no-items error-item">Erreur</li>'; if (upcomingCountEl) upcomingCountEl.textContent = 'Err'; } } else { console.warn("Éléments DOM Upcoming Animations manquants"); }
+        console.log("renderDashboard: Calcul Tâches en cours..."); if (ongoingCountEl && ongoingListEl) { try { const ongoing = cachedTasks.filter(t => t.status === 'en cours').sort((a, b) => getDateValueInMillis(a.dueDate) - getDateValueInMillis(b.dueDate)); ongoingCountEl.textContent = ongoing.length; ongoingListEl.innerHTML = ongoing.length === 0 ? '<li class="no-items">Aucune tâche en cours</li>' : ongoing.slice(0, 4).map(t => { const assignees = (Array.isArray(t.assigneeIds) ? t.assigneeIds : []).map(id => cachedMembers.find(m => m.id === id)?.firstname || '?').join(', '); return `<li>${t.description || 'N/A'} <span class="dashboard-name">(${assignees || 'N/A'})</span></li>`; }).join(''); } catch(e){ console.error("Erreur Bloc Ongoing Tasks:",e); if(ongoingListEl) ongoingListEl.innerHTML = '<li class="no-items error-item">Erreur</li>'; if(ongoingCountEl) ongoingCountEl.textContent = 'Err';} } else { console.warn("Éléments DOM Ongoing Tasks manquants"); }
+        console.log("renderDashboard: Calcul Échéances..."); if (deadlinesListEl && overdueTasksBadgeEl) { try { let overdueCount = 0; const deadlines = cachedTasks.map(t => ({ ...t, dueDateMs: getDateValueInMillis(t.dueDate) })).filter(t => t.status !== 'terminé' && t.dueDateMs !== Infinity && t.dueDateMs < sevenDays).sort((a, b) => a.dueDateMs - b.dueDateMs); deadlinesListEl.innerHTML = deadlines.length === 0 ? '<li class="no-items">Aucune échéance proche</li>' : deadlines.slice(0, 5).map(t => { const assignees = (Array.isArray(t.assigneeIds) ? t.assigneeIds : []).map(id => cachedMembers.find(m => m.id === id)?.firstname || '?').join(', '); const isOverdue = t.dueDateMs < nowTime; if(isOverdue) overdueCount++; const dateStr = new Date(t.dueDateMs).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}); const overdueClass = isOverdue ? 'overdue' : 'due-soon'; const overdueText = isOverdue ? '<span class="overdue"> (Retard!)</span>' : ''; return `<li><span class="dashboard-date ${overdueClass}">${dateStr}</span> ${t.description || 'N/A'} <span class="dashboard-name">(${assignees || 'N/A'})</span>${overdueText}</li>`; }).join(''); if (overdueCount > 0) { overdueTasksBadgeEl.textContent = overdueCount; overdueTasksBadgeEl.style.display = 'inline-block'; } else { overdueTasksBadgeEl.style.display = 'none'; } } catch(e){ console.error("Erreur Bloc Deadlines:",e); if(deadlinesListEl) deadlinesListEl.innerHTML = '<li class="no-items error-item">Erreur</li>'; if(overdueTasksBadgeEl) overdueTasksBadgeEl.style.display = 'none'; } } else { console.warn("Éléments DOM Deadlines manquants"); }
+        console.log("renderDashboard: Calcul Budget Planifié..."); if (plannedBudgetTotalEl && budgetDetailsInfoEl) { try { let totalPlannedBudget = 0; let plannedAnimationCount = 0; const relevantAnimationIds = cachedAnimations.filter(a => a.status === 'prévue' || a.status === 'en cours').map(a => a.id); plannedAnimationCount = relevantAnimationIds.length; if (relevantAnimationIds.length > 0) { cachedTasks.filter(task => relevantAnimationIds.includes(task.animationId)).forEach(task => { if (typeof task.budget === 'number' && !isNaN(task.budget) && task.budget > 0) { totalPlannedBudget += task.budget; } }); } plannedBudgetTotalEl.textContent = totalPlannedBudget.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }); budgetDetailsInfoEl.textContent = `(${plannedAnimationCount} anim. planifiée${plannedAnimationCount !== 1 ? 's' : ''})`; budgetDetailsInfoEl.classList.remove('loading-error'); } catch(e) { console.error("Erreur Bloc Planned Budget:", e); if(plannedBudgetTotalEl) plannedBudgetTotalEl.textContent = 'Erreur'; if(budgetDetailsInfoEl) { budgetDetailsInfoEl.textContent = 'Erreur calcul.'; budgetDetailsInfoEl.classList.add('loading-error'); } } } else { console.warn("Éléments DOM Planned Budget manquants"); }
+        console.log("renderDashboard: Calcul Budget Annuel Restant..."); if (remainingAnnualBudgetEl && remainingBudgetDetailsEl) { try { const totalAnnualBudget = 12 * 200; let spentOrPlannedBudget = 0; const relevantAnimationIdsThisYear = cachedAnimations.filter(a => { let animYear = null; try { if (a.dateTime?.toDate) animYear = a.dateTime.toDate().getFullYear(); } catch(e){} return animYear === currentYear && ['prévue', 'en cours', 'réalisée'].includes(a.status); }).map(a => a.id); if (relevantAnimationIdsThisYear.length > 0) { cachedTasks.filter(task => relevantAnimationIdsThisYear.includes(task.animationId)).forEach(task => { if (typeof task.budget === 'number' && !isNaN(task.budget) && task.budget > 0) { spentOrPlannedBudget += task.budget; } }); } const remainingAnnual = totalAnnualBudget - spentOrPlannedBudget; remainingAnnualBudgetEl.textContent = remainingAnnual.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }); remainingBudgetDetailsEl.textContent = `Annuel (${totalAnnualBudget.toLocaleString('fr-FR')}€) - Engagé/Réalisé (${spentOrPlannedBudget.toLocaleString('fr-FR')}€)`; remainingBudgetDetailsEl.classList.remove('loading-error'); remainingAnnualBudgetEl.style.color = remainingAnnual < 0 ? 'var(--danger-color)' : 'var(--info-color)'; } catch (error) { console.error("Erreur Bloc Remaining Budget:", error); if (remainingAnnualBudgetEl) remainingAnnualBudgetEl.textContent = 'Erreur'; if (remainingBudgetDetailsEl) { remainingBudgetDetailsEl.textContent = 'Erreur calcul.'; remainingBudgetDetailsEl.classList.add('loading-error'); } } } else { console.warn("Éléments DOM Remaining Budget manquants"); }
+        console.log("renderDashboard: Préparation Graphique Budget Mensuel..."); if (budgetChartCtx) { try { const monthlyBudgets = {}; cachedTasks.filter(task => typeof task.budget === 'number' && task.budget > 0 && task.animationId).forEach(task => { const animation = cachedAnimations.find(a => a.id === task.animationId); if (animation && animation.dateTime?.toDate) { try { const animDate = animation.dateTime.toDate(); const animYear = animDate.getFullYear(); if (animYear === currentYear) { const monthKey = `${currentYear}-${(animDate.getMonth() + 1).toString().padStart(2, '0')}`; monthlyBudgets[monthKey] = (monthlyBudgets[monthKey] || 0) + task.budget; } } catch(dateError) { console.warn(`Erreur date anim ${task.animationId} pour tâche ${task.id}`, dateError); } } }); const sortedMonths = Object.keys(monthlyBudgets).sort(); if (sortedMonths.length > 0) { const budgetData = sortedMonths.map(m => monthlyBudgets[m]); const targetData = sortedMonths.map(() => 200); dashboardBudgetChartInstance = new Chart(budgetChartCtx, { type: 'line', data: { labels: sortedMonths, datasets: [{ label: 'Budget Tâches (€)', data: budgetData, borderColor: 'rgba(108, 157, 126, 0.8)', backgroundColor: 'rgba(108, 157, 126, 0.2)', fill: true, tension: 0.1, }, { label: 'Objectif Mensuel (€)', data: targetData, borderColor: 'rgba(247, 200, 115, 0.7)', borderDash: [5, 5], fill: false, pointRadius: 0, tension: 0, }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('fr-FR') + ' €' } }, x: { title: { display: true, text: `Mois (${currentYear})`}} }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: context => `${context.dataset.label || ''}: ${context.parsed.y?.toLocaleString('fr-FR') + ' €' || 'N/A'}` } } } } }); setChartError(budgetChartErrorEl, null); } else { setChartError(budgetChartErrorEl, `Aucune donnée budget (tâches) pour ${currentYear}.`); if (budgetChartCtx) budgetChartCtx.clearRect(0, 0, budgetChartCtx.canvas.width, budgetChartCtx.canvas.height); } } catch (error) { console.error("Erreur Bloc Chart Budget:", error); setChartError(budgetChartErrorEl, 'Erreur affichage graphique.', true); if (budgetChartCtx) budgetChartCtx.clearRect(0, 0, budgetChartCtx.canvas.width, budgetChartCtx.canvas.height); } } else { console.warn("Canvas #dashboard-budget-chart non trouvé."); setChartError(budgetChartErrorEl, 'Élément graphique non trouvé.', true); }
+        console.log("renderDashboard: Préparation Calendrier..."); if (calendarEl) { try { const events = cachedAnimations.filter(a => a.dateTime?.toDate && (a.status === 'prévue' || a.status === 'en cours')).map(a => ({ id: a.id, title: a.title || 'Animation', start: a.dateTime.toDate(), allDay: false, color: a.status === 'en cours' ? 'var(--secondary-color)' : 'var(--primary-color)', textColor: a.status === 'en cours' ? 'var(--text-color)' : 'var(--text-light)', borderColor: a.status === 'en cours' ? 'var(--secondary-color)' : 'var(--primary-color)' })); console.log(`Dashboard: ${events.length} événements calendrier.`); dashboardCalendarInstance = new FullCalendar.Calendar(calendarEl, { initialView: 'dayGridMonth', locale: 'fr', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' }, buttonText: { today: 'Auj.', month: 'Mois', week: 'Semaine' }, height: 'auto', aspectRatio: 1.8, handleWindowResize: true, events: events, eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false }, eventClick: function(info) { info.jsEvent.preventDefault(); showAnimationDetails(info.event.id); } }); calendarEl.style.display = 'block'; dashboardCalendarInstance.render(); setCalendarMessage(null); console.log("Dashboard: FullCalendar rendu."); } catch (error) { console.error("Erreur Bloc Calendar:", error); setCalendarMessage('Erreur affichage calendrier.', true); if (dashboardCalendarInstance) { try { dashboardCalendarInstance.destroy(); } catch (e) {} dashboardCalendarInstance = null; } } } else { console.warn("Élément #dashboard-calendar non trouvé."); setCalendarMessage('Conteneur calendrier non trouvé.', true); }
+        console.log("--- Fin Exécution renderDashboard ---");
+    };
+    const renderStats = async () => { console.log("--- Début Exécution renderStats ---"); const statusCtx = document.getElementById('stats-status-chart')?.getContext('2d'); const typeCtx = document.getElementById('stats-type-chart')?.getContext('2d'); const participationCtx = document.getElementById('stats-participation-chart')?.getContext('2d'); if (!statsTotalCompletedEl || !statsAvgParticipationEl || !statsTotalBudgetSpentEl || !statusCtx || !typeCtx || !participationCtx || !statusErrorEl || !typeErrorEl || !participationErrorEl ) { console.error("DOM Error: Éléments Stats manquants."); return; } if (!currentUser) { console.warn("Render Stats annulé (déconnecté)"); return; } statsTotalCompletedEl.textContent = '...'; statsAvgParticipationEl.textContent = '...'; statsTotalBudgetSpentEl.textContent = '...'; statusErrorEl.style.display = 'none'; typeErrorEl.style.display = 'none'; participationErrorEl.style.display = 'none'; if (statusChartInstance) { statusChartInstance.destroy(); statusChartInstance = null; } if (typeChartInstance) { typeChartInstance.destroy(); typeChartInstance = null; } if (participationChartInstance) { participationChartInstance.destroy(); participationChartInstance = null; } console.log(`renderStats: État caches: initialLoadComplete=${isInitialLoadComplete}, members=${membersLoaded}, anims=${animationsLoaded}, tasks=${tasksLoaded}`); if (!isInitialLoadComplete || !membersLoaded || !animationsLoaded || !tasksLoaded) { console.warn("Stats: Données cache non prêtes."); statsTotalCompletedEl.textContent = 'Err'; statsAvgParticipationEl.textContent = 'Err'; statsTotalBudgetSpentEl.textContent = 'Err'; return; }
+        try { console.log("Stats: Calculs..."); const completedAnimations = cachedAnimations.filter(a => a.status === 'réalisée'); const memberCount = cachedMembers.length; const totalCompleted = completedAnimations.length; let totalParticipants = 0; completedAnimations.forEach(a => { totalParticipants += (a.participantIds || []).length; }); const avgParticipation = (totalCompleted > 0 && memberCount > 0) ? (totalParticipants / (totalCompleted * memberCount)) * 100 : 0; let totalBudgetSpent = 0; const completedAnimationIds = completedAnimations.map(a => a.id); if (completedAnimationIds.length > 0) { cachedTasks.filter(task => completedAnimationIds.includes(task.animationId)).forEach(task => { if (typeof task.budget === 'number' && !isNaN(task.budget) && task.budget > 0) { totalBudgetSpent += task.budget; } }); } const statusCounts = cachedAnimations.reduce((acc, a) => { const s = a.status || 'inconnu'; acc[s] = (acc[s] || 0) + 1; return acc; }, {}); const typeCounts = cachedAnimations.reduce((acc, a) => { const type = a.animationType || 'Non défini'; acc[type] = (acc[type] || 0) + 1; return acc; }, {}); const memberParticipation = cachedMembers.map(m => { let c = 0; completedAnimations.forEach(a => { if ((a.participantIds || []).includes(m.id)) c++; }); return { name: `${m.firstname} ${m.lastname}`, count: c }; }).sort((a, b) => b.count - a.count);
+            console.log("Stats: MàJ DOM Indicateurs..."); statsTotalCompletedEl.textContent = totalCompleted; statsAvgParticipationEl.textContent = `${avgParticipation.toFixed(1)} %`; statsTotalBudgetSpentEl.textContent = totalBudgetSpent.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+            console.log("Stats: Création Graphiques..."); const chartColors = [ 'rgba(108, 157, 126, 0.7)', 'rgba(168, 216, 185, 0.7)', 'rgba(247, 200, 115, 0.7)', 'rgba(232, 126, 126, 0.7)', 'rgba(135, 199, 161, 0.7)', 'rgba(176, 190, 197, 0.7)', 'rgba(136, 187, 214, 0.7)', 'rgba(126, 141, 204, 0.7)' ]; const chartHoverColor = 'rgba(74, 74, 74, 0.1)';
+             if (statusCtx && Object.keys(statusCounts).length > 0) { try { const labels = Object.keys(statusCounts), data = Object.values(statusCounts); statusChartInstance = new Chart(statusCtx, { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: chartColors.slice(0, labels.length), hoverBackgroundColor: chartHoverColor, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }} } }); statusErrorEl.style.display = 'none'; } catch(e) { console.error("Err graph Statut:", e); statusErrorEl.textContent = 'Erreur graph Statut.'; statusErrorEl.style.display = 'block'; statusErrorEl.classList.add('error');} } else if (statusCtx) { statusErrorEl.textContent = 'Aucune donnée statut.'; statusErrorEl.style.display = 'block'; statusCtx.clearRect(0,0,statusCtx.canvas.width,statusCtx.canvas.height); }
+            if (typeCtx && Object.keys(typeCounts).length > 0) { try { const labels = Object.keys(typeCounts), data = Object.values(typeCounts); const colors = Array.from({ length: labels.length }, (_, i) => chartColors[i % chartColors.length]); typeChartInstance = new Chart(typeCtx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors, hoverBackgroundColor: chartHoverColor, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }} } }); typeErrorEl.style.display = 'none'; } catch(e) { console.error("Err graph Type:", e); typeErrorEl.textContent = 'Erreur graph Type.'; typeErrorEl.style.display = 'block'; typeErrorEl.classList.add('error');} } else if (typeCtx) { typeErrorEl.textContent = 'Aucune donnée type.'; typeErrorEl.style.display = 'block'; typeCtx.clearRect(0,0,typeCtx.canvas.width,typeCtx.canvas.height); }
+            if (participationCtx && memberParticipation.length > 0) { try { const labels = memberParticipation.map(m => m.name), data = memberParticipation.map(m => m.count); participationChartInstance = new Chart(participationCtx, { type: 'bar', data: { labels, datasets: [{ label: 'Nb Participations (Anim. Réalisées)', data, backgroundColor: 'rgba(136, 187, 214, 0.6)', borderColor: 'rgba(136, 187, 214, 1)', borderWidth: 1, hoverBackgroundColor: 'rgba(136, 187, 214, 0.8)' }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } }, y: { ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } } }); participationErrorEl.style.display = 'none'; } catch(e) { console.error("Err graph Participation:", e); participationErrorEl.textContent = 'Erreur graph Participation.'; participationErrorEl.style.display = 'block'; participationErrorEl.classList.add('error');} } else if (participationCtx) { participationErrorEl.textContent = 'Aucune donnée participation.'; participationErrorEl.style.display = 'block'; participationCtx.clearRect(0,0,participationCtx.canvas.width,participationCtx.canvas.height); }
+        } catch (error) { console.error("Erreur calcul/affichage stats:", error); statsTotalCompletedEl.textContent = 'Err'; statsAvgParticipationEl.textContent = 'Err'; statsTotalBudgetSpentEl.textContent = 'Err'; statusErrorEl.textContent = 'Erreur chargement stats.'; statusErrorEl.style.display = 'block'; statusErrorEl.classList.add('error'); typeErrorEl.textContent = 'Erreur chargement stats.'; typeErrorEl.style.display = 'block'; typeErrorEl.classList.add('error'); participationErrorEl.textContent = 'Erreur chargement stats.'; participationErrorEl.style.display = 'block'; participationErrorEl.classList.add('error'); }
+        console.log("--- Fin Exécution renderStats ---");
+    };
+    // #endregion
 
-/* Main Content */
-.main-content {
-    flex-grow: 1;
-    padding: 30px;
-    padding-bottom: 90px; /* Espace pour footer fixe */
-}
+    // #region Event Handlers (CRUD & Autres)
+    const handleAddMember = () => { if (!currentUser) { alert('Connectez-vous.'); return; } editingMemberId = null; if (memberForm) memberForm.reset(); if (memberFormTitle) memberFormTitle.textContent = "Ajouter Membre"; if (hiddenMemberIdInput) hiddenMemberIdInput.value = ''; if (memberModal) openModal(memberModal); }; const handleEditMember = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } editingMemberId = id; try { const doc = await membersCollection.doc(id).get(); if (doc.exists) { const m = doc.data(); if (memberFormTitle) memberFormTitle.textContent = "Modifier Membre"; if (hiddenMemberIdInput) hiddenMemberIdInput.value = id; ['firstname', 'lastname', 'role', 'contact'].forEach(f => { const el = document.getElementById(`member-${f}`); if (el) el.value = m[f] || ''; }); if (memberModal) openModal(memberModal); } else { alert("Membre introuvable."); editingMemberId = null; } } catch (e) { console.error("Erreur récup membre:", e); alert("Erreur récupération membre."); editingMemberId = null; } }; const handleDeleteMember = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } let name = `ID ${id}`, email = null; try { const d=await membersCollection.doc(id).get(); if(d.exists) { name=`${d.data().firstname||''} ${d.data().lastname||''}`.trim()||name; email=d.data().contact; } } catch(e){} if (confirm(`Supprimer ${name} ?\n${email?'Accès autorisé pour '+email+' sera aussi retiré.':''}`)) { try { const batch = db.batch(); batch.delete(membersCollection.doc(id)); if (email) batch.delete(authorizedUsersCollection.doc(email)); await batch.commit(); console.log(`Membre ${id} et accès ${email||'aucun'} supprimés.`); membersLoaded = false; alert(`${name} supprimé.`); ensureCacheAndRender(window.location.hash.substring(1) || 'dashboard'); } catch (e) { console.error("Err suppr membre/accès:", e); alert("Erreur suppression."); } } }; const handleMemberFormSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Connectez-vous."); return; } const firstname = document.getElementById('member-firstname')?.value.trim(); const lastname = document.getElementById('member-lastname')?.value.trim(); const role = document.getElementById('member-role')?.value.trim(); const contactEmail = document.getElementById('member-contact')?.value.trim(); if (!firstname || !lastname) { alert("Prénom et Nom requis."); return; } if (contactEmail && !/\S+@\S+\.\S+/.test(contactEmail)) { alert("Email invalide."); return; } const data = { firstname, lastname, role, contact: contactEmail }; const btn = memberForm?.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = '...'; } try { if (editingMemberId) { await membersCollection.doc(editingMemberId).update(data); alert(`Membre mis à jour.`); } else { const docRef = await membersCollection.add(data); console.log("Nouveau membre:", docRef.id); if (contactEmail) { try { await authorizedUsersCollection.doc(contactEmail).set({ addedFromMemberForm: true, memberName: `${firstname} ${lastname}`, addedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); alert(`Membre ajouté. Accès autorisé pour ${contactEmail}.`); } catch (authError) { console.error(`Err ajout accès auto ${contactEmail}:`, authError); alert(`Membre ajouté, mais erreur autorisation auto pour ${contactEmail}. Vérifiez manuellement.`); } } else { alert(`Membre ajouté (sans email d'accès).`); } } membersLoaded = false; if (memberModal) closeModal(memberModal); ensureCacheAndRender('members'); } catch (e) { console.error("Err save membre:", e); alert("Erreur enregistrement."); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; } } };
+    const handleAddAnimation = async () => { if (!currentUser) { alert('Connectez-vous.'); return; } editingAnimationId = null; if (animationForm) animationForm.reset(); if (animationFormTitle) animationFormTitle.textContent = "Ajouter Animation"; if (hiddenAnimationIdInput) hiddenAnimationIdInput.value = ''; const statusSelect = document.getElementById('animation-status'); if(statusSelect) statusSelect.value = 'prévue'; await renderMemberCheckboxes(); if (animationModal) openModal(animationModal); }; const handleEditAnimation = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } editingAnimationId = id; try { await loadMembersIntoCache(); const doc = await animationsCollection.doc(id).get(); if (doc.exists) { const a = doc.data(); if (animationFormTitle) animationFormTitle.textContent = "Modifier Animation"; if (hiddenAnimationIdInput) hiddenAnimationIdInput.value = id; ['title', 'description', 'location', 'status'].forEach(f => { const el = document.getElementById(`animation-${f}`); if (el) el.value = a[f] || (f === 'status' ? 'prévue' : ''); }); const typeSelect = document.getElementById('animation-type'); if (typeSelect) typeSelect.value = a.animationType || ''; const docsArea = document.getElementById('animation-docs'); if (docsArea) docsArea.value = (a.documentLinks || []).join('\n'); const dateInput = document.getElementById('animation-date'); if (dateInput) { let val = ''; if (a.dateTime?.toDate) { try { const d = a.dateTime.toDate(); val = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}T${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`; } catch (e) {} } dateInput.value = val; } await renderMemberCheckboxes(a.participantIds || []); if (animationModal) openModal(animationModal); } else { alert("Animation introuvable."); editingAnimationId = null; } } catch (e) { console.error("Err récup anim:", e); alert("Erreur récupération anim."); editingAnimationId = null; } }; const handleDeleteAnimation = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } let title = `ID ${id}`; try { const d=await animationsCollection.doc(id).get(); if(d.exists) title=`"${d.data().title||'Sans titre'}"`; } catch(e){} if (confirm(`Supprimer anim ${title} ?\n(Supprime aussi tâches liées!)`)) { try { const tasksSnapshot = await tasksCollection.where("animationId", "==", id).get(); const batch = db.batch(); batch.delete(animationsCollection.doc(id)); tasksSnapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); console.log(`Anim ${id} et ${tasksSnapshot.size} tâches supprimées.`); alert(`Anim ${title} et tâches supprimées.`); animationsLoaded = false; tasksLoaded = false; ensureCacheAndRender(window.location.hash.substring(1) || 'dashboard'); } catch (error) { console.error("Err suppr anim/tâches:", error); alert("Erreur suppression."); } } }; const handleAnimationFormSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Connectez-vous."); return; } const title = document.getElementById('animation-title')?.value.trim(); const dateStr = document.getElementById('animation-date')?.value; const type = document.getElementById('animation-type')?.value; const status = document.getElementById('animation-status')?.value || 'prévue'; const description = document.getElementById('animation-description')?.value.trim(); const location = document.getElementById('animation-location')?.value.trim(); const docs = document.getElementById('animation-docs')?.value.split('\n').map(l=>l.trim()).filter(Boolean) || []; const participants = Array.from(animationForm?.querySelectorAll('input[name="participants"]:checked') || []).map(cb => cb.value); if (!title || !dateStr || !type) { alert("Titre, Date/Heure et Type requis."); return; } let timestamp; try { timestamp = firebase.firestore.Timestamp.fromDate(new Date(dateStr)); if (isNaN(timestamp.toDate().getTime())) throw new Error(); } catch (e) { alert("Date/Heure invalide."); return; } const data = { title, dateTime: timestamp, animationType: type, status, description, location, documentLinks: docs, participantIds: participants }; const btn = animationForm?.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = '...'; } try { if (editingAnimationId) { await animationsCollection.doc(editingAnimationId).update(data); alert('Animation màj !'); } else { await animationsCollection.add(data); alert('Animation ajoutée !'); } animationsLoaded = false; tasksLoaded = false; if (animationModal) closeModal(animationModal); ensureCacheAndRender(window.location.hash.substring(1) || 'dashboard'); } catch (e) { console.error("Err save anim:", e); alert("Erreur enregistrement."); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; } } };
+    const handleAddTask = async () => { if (!currentUser) { alert('Connectez-vous.'); return; } editingTaskId = null; if (taskForm) taskForm.reset(); if (taskFormTitle) taskFormTitle.textContent = "Ajouter Tâche"; if (hiddenTaskIdInput) hiddenTaskIdInput.value = ''; const statusSelect = document.getElementById('task-status'); if(statusSelect) statusSelect.value = 'à faire'; try { await Promise.all([ loadMembersIntoCache(), loadAnimationsIntoCache() ]); await renderMemberCheckboxesForTask(); populateAnimationOptions(taskAnimationSelect); if (taskModal) openModal(taskModal); } catch(e) { console.error("Err prépa form tâche:", e); alert("Erreur chargement données form."); } }; const handleEditTask = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } editingTaskId = id; try { await Promise.all([loadMembersIntoCache(), loadAnimationsIntoCache()]); const doc = await tasksCollection.doc(id).get(); if (doc.exists) { const t = doc.data(); if (taskFormTitle) taskFormTitle.textContent = "Modifier Tâche"; if (hiddenTaskIdInput) hiddenTaskIdInput.value = id; if(document.getElementById('task-description')) document.getElementById('task-description').value = t.description || ''; if(document.getElementById('task-status')) document.getElementById('task-status').value = t.status || 'à faire'; populateAnimationOptions(taskAnimationSelect, t.animationId); const budgetInput = document.getElementById('task-budget'); if (budgetInput) { budgetInput.value = (t.budget != null && !isNaN(t.budget)) ? t.budget : ''; } const dateInput = document.getElementById('task-due-date'); if(dateInput){ let val = ''; if (t.dueDate) { try { const d = t.dueDate.toDate ? t.dueDate.toDate() : new Date(t.dueDate+'T00:00:00'); if(d instanceof Date && !isNaN(d)) val = d.toISOString().split('T')[0]; } catch(e){} } dateInput.value = val; } const assignees = Array.isArray(t.assigneeIds) ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []); await renderMemberCheckboxesForTask(assignees); if (taskModal) openModal(taskModal); } else { alert("Tâche introuvable."); editingTaskId = null; } } catch (e) { console.error("Err récup tâche:", e); alert("Erreur récupération tâche."); editingTaskId = null; } }; const handleDeleteTask = async (id) => { if (!currentUser) { alert('Connectez-vous.'); return; } let desc = `ID ${id}`; try { const d=await tasksCollection.doc(id).get(); if(d.exists) desc=`"${d.data().description||'Sans desc.'}"`; } catch(e){} if (confirm(`Supprimer tâche ${desc} ?`)) { try { await tasksCollection.doc(id).delete(); tasksLoaded = false; alert(`Tâche ${desc} supprimée.`); ensureCacheAndRender(window.location.hash.substring(1) || 'dashboard'); } catch (e) { console.error("Err suppr tâche:", e); alert("Erreur suppression."); } } }; const handleTaskFormSubmit = async (e) => { e.preventDefault(); if (!currentUser) { alert("Connectez-vous."); return; } const description = document.getElementById('task-description')?.value.trim(); const animationId = document.getElementById('task-animation')?.value; const status = document.getElementById('task-status')?.value || 'à faire'; const dueDateStr = document.getElementById('task-due-date')?.value; const assigneeIds = Array.from(taskForm?.querySelectorAll('input[name="taskAssignees"]:checked') || []).map(cb => cb.value); const budgetInput = document.getElementById('task-budget'); let taskBudget = null; if (budgetInput?.value.trim() !== '') { const parsedBudget = parseFloat(budgetInput.value.replace(',', '.')); if (!isNaN(parsedBudget) && parsedBudget >= 0) { taskBudget = parsedBudget; } else { alert("Le budget alloué doit être un nombre positif (ou laissé vide)."); return; } } if (!description || !animationId || assigneeIds.length === 0) { alert("Description, Animation liée et Assigné(s) requis."); return; } let dueDate = null; if (dueDateStr) { try { const dateObj = new Date(dueDateStr + 'T00:00:00Z'); if (isNaN(dateObj.getTime())) throw new Error(); dueDate = firebase.firestore.Timestamp.fromDate(dateObj); } catch (e) { alert("Date échéance invalide."); return; } } const data = { description, animationId, assigneeIds, status, dueDate, budget: taskBudget }; const btn = taskForm?.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = '...'; } try { if (editingTaskId) { await tasksCollection.doc(editingTaskId).update(data); alert('Tâche màj !'); } else { await tasksCollection.add(data); alert('Tâche ajoutée !'); } tasksLoaded = false; if (taskModal) closeModal(taskModal); ensureCacheAndRender(window.location.hash.substring(1) || 'dashboard'); } catch (e) { console.error("Err save tâche:", e); alert("Erreur enregistrement."); } finally { if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; } } };
+    const handleShowAnimationTasks = async (animationId, animationTitle) => { if (!currentUser) { alert("Connectez-vous."); return; } if (!taskListModal || !modalTaskTitle || !modalTaskContent) { console.error("DOM Error #task-list-modal"); return; } modalTaskTitle.textContent = `Tâches pour : ${animationTitle || 'Animation'}`; modalTaskContent.innerHTML = '<p>Chargement...</p>'; openModal(taskListModal); try { if (!tasksLoaded || !membersLoaded) { await Promise.all([ loadTasksIntoCache(), loadMembersIntoCache() ]); if (!tasksLoaded || !membersLoaded) throw new Error("Données non chargées."); } const relatedTasks = cachedTasks.filter(t => t.animationId === animationId).sort((a, b) => getDateValueInMillis(a.dueDate) - getDateValueInMillis(b.dueDate)); if (relatedTasks.length === 0) { modalTaskContent.innerHTML = '<p style="text-align:center; color:#888; padding: 20px 0;">Aucune tâche associée.</p>'; return; } let tasksHtml = ''; relatedTasks.forEach(task => { let dateStr = 'N/A', overdueClass = ''; let statusIcon = '<i class="fas fa-circle" title="À faire" style="color: var(--warning-color);"></i>'; try { const dMs = getDateValueInMillis(task.dueDate); if (dMs !== Infinity) { const d = new Date(dMs); dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); if (task.status !== 'terminé' && d.getTime() < Date.now() - 864e5) overdueClass = 'text-danger'; } } catch (e) { dateStr = 'Date invalide'; } if (task.status === 'en cours') statusIcon = '<i class="fas fa-spinner fa-spin" title="En cours" style="color: var(--primary-color);"></i>'; else if (task.status === 'terminé') statusIcon = '<i class="fas fa-check-circle" title="Terminé" style="color: var(--success-color);"></i>'; const assignees = (Array.isArray(task.assigneeIds)?task.assigneeIds:[]).map(id => cachedMembers.find(m=>m.id===id)?`${cachedMembers.find(m=>m.id===id).firstname} ${cachedMembers.find(m=>m.id===id).lastname}`:'Inconnu').join(', '); const taskBudgetDisplay = (task.budget != null && !isNaN(task.budget)) ? `${Number(task.budget).toLocaleString('fr-FR')} €` : ''; const budgetDetailHtml = taskBudgetDisplay ? `<div class="task-detail"><i class="fas fa-euro-sign" style="color: var(--warning-color);"></i> <span>Budget: ${taskBudgetDisplay}</span></div>` : ''; tasksHtml += `<div class="modal-task-item"><p class="task-desc">${task.description||'N/A'}</p><div class="task-detail">${statusIcon} <span>Statut : ${task.status||'N/A'}</span></div><div class="task-detail" title="Assigné(s): ${assignees}"><i class="fas fa-users"></i> <span>Assigné(s) : ${assignees||'N/A'}</span></div><div class="task-detail"><i class="fas fa-clock"></i> <span class="${overdueClass}">Échéance : ${dateStr} ${overdueClass?'(Retard!)':''}</span></div>${budgetDetailHtml}</div>`; }); modalTaskContent.innerHTML = tasksHtml; } catch (error) { console.error("Err affichage tâches modale:", error); modalTaskContent.innerHTML = `<p class="error-message">Erreur chargement tâches.<br><small>${error.message}</small></p>`; } };
+    const showAnimationDetails = async (animationId) => { if (!currentUser || !animationId) return; if (!animationDetailModal || !animationDetailContent || !detailModalTitle || !editFromDetailBtn) { console.error("DOM Error modale détail"); return; } detailModalTitle.textContent = "Détail Animation"; animationDetailContent.innerHTML = '<p>Chargement...</p>'; openModal(animationDetailModal); currentDetailAnimationId = animationId; try { await Promise.all([ loadAnimationsIntoCache(), loadMembersIntoCache(), loadTasksIntoCache() ]); const animation = cachedAnimations.find(a => a.id === animationId); if (!animation) { animationDetailContent.innerHTML = '<p class="error-message">Animation non trouvée.</p>'; currentDetailAnimationId = null; return; } if (animation.title) detailModalTitle.textContent = `Détail: ${animation.title}`; let dateStr = 'N/D'; if (animation.dateTime?.toDate) { try { dateStr = animation.dateTime.toDate().toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }) } catch (e) {} } let participantsList = '<li>Aucun</li>'; if (Array.isArray(animation.participantIds) && animation.participantIds.length > 0) { participantsList = animation.participantIds.map(pId => { const m = cachedMembers.find(m => m.id === pId); return `<li>${m ? m.firstname + ' ' + m.lastname : 'Inconnu'}</li>`; }).join(''); } let documentsList = '<li>Aucun</li>'; if (Array.isArray(animation.documentLinks) && animation.documentLinks.length > 0) { documentsList = animation.documentLinks.map(link => { let txt = link; try { txt = new URL(link).pathname.split('/').pop() || link; } catch (e) {} return `<li><a href="${link}" target="_blank" rel="noopener noreferrer">${txt}</a></li>`; }).join(''); } const descHtml = (animation.description || 'Aucune').replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/\n/g, "<br>"); const totalAnimBudget = calculateAnimationBudget(animationId); const budgetDetailDisplay = totalAnimBudget > 0 ? `${totalAnimBudget.toLocaleString('fr-FR')} € (Total tâches)` : 'N/D'; animationDetailContent.innerHTML = `<p><strong><i class="fas fa-calendar-day fa-fw"></i> Date:</strong> ${dateStr}</p><p><strong><i class="fas fa-map-marker-alt fa-fw"></i> Lieu:</strong> ${animation.location||'N/D'}</p><p><strong><i class="fas fa-tags fa-fw"></i> Type:</strong> ${animation.animationType||'N/D'}</p><p><strong><i class="fas fa-info-circle fa-fw"></i> Statut:</strong> ${animation.status||'N/D'}</p><p><strong><i class="fas fa-euro-sign fa-fw"></i> Budget:</strong> ${budgetDetailDisplay}</p><div style="margin-top: 10px;"><strong><i class="fas fa-align-left fa-fw"></i> Description:</strong><div style="margin-left: 24px; margin-top: 5px; white-space: pre-wrap; background-color:#f8f9fa; padding: 8px; border-radius: 4px; max-height: 150px; overflow-y: auto;">${descHtml}</div></div><p style="margin-top: 10px;"><strong><i class="fas fa-users fa-fw"></i> Participants (${(animation.participantIds||[]).length}):</strong></p><ul style="margin-left: 24px;">${participantsList}</ul><p style="margin-top: 10px;"><strong><i class="fas fa-paperclip fa-fw"></i> Documents (${(animation.documentLinks||[]).length}):</strong></p><ul style="margin-left: 24px;">${documentsList}</ul>`; } catch (error) { console.error("Err affichage détails anim:", error); animationDetailContent.innerHTML = '<p class="error-message">Impossible charger détails.</p>'; currentDetailAnimationId = null; } };
+    const handleExportCsvStats = () => { if (!currentUser) { alert('Connectez-vous.'); return; } console.log("Début export CSV..."); if (!membersLoaded || !animationsLoaded || !tasksLoaded) { alert("Données non chargées."); return; } try { let csvRows = []; const headers = ['Section', 'Indicateur / Nom', 'Valeur / Détail 1', 'Détail 2', 'Détail 3'].map(escapeCsvValue).join(';'); csvRows.push(headers); csvRows.push(['Indicateurs Clés', escapeCsvValue('Animations Réalisées'), escapeCsvValue(statsTotalCompletedEl?.textContent||'N/A'), '', ''].join(';')); csvRows.push(['', escapeCsvValue('Taux Participation Moyen (%)'), escapeCsvValue(statsAvgParticipationEl?.textContent?.replace('%','').trim()||'N/A'), '', ''].join(';')); csvRows.push(['', escapeCsvValue('Budget Total Engagé (Tâches Anim. Réalisées) (€)'), escapeCsvValue(statsTotalBudgetSpentEl?.textContent?.replace('€','').replace(/\s/g,'').replace(',','.').trim()||'N/A'), '', ''].join(';')); csvRows.push(['', '', '', '', '']); const typeCounts = cachedAnimations.reduce((acc, a)=>{const t=a.animationType||'N/D'; acc[t]=(acc[t]||0)+1; return acc;}, {}); csvRows.push(['Répartition par Type', escapeCsvValue('Type'), escapeCsvValue('Nombre'), '', ''].join(';')); Object.entries(typeCounts).forEach(([t, c])=>csvRows.push(['', escapeCsvValue(t), escapeCsvValue(c), '', ''].join(';'))); if(!Object.keys(typeCounts).length) csvRows.push(['', escapeCsvValue('Aucune donnée'), '', '', ''].join(';')); csvRows.push(['', '', '', '', '']); const statusCounts = cachedAnimations.reduce((acc, a)=>{const s=a.status||'N/A'; acc[s]=(acc[s]||0)+1; return acc;}, {}); csvRows.push(['Répartition par Statut', escapeCsvValue('Statut'), escapeCsvValue('Nombre'), '', ''].join(';')); Object.entries(statusCounts).forEach(([s, c])=>csvRows.push(['', escapeCsvValue(s), escapeCsvValue(c), '', ''].join(';'))); if(!Object.keys(statusCounts).length) csvRows.push(['', escapeCsvValue('Aucune donnée'), '', '', ''].join(';')); csvRows.push(['', '', '', '', '']); const completedAnims = cachedAnimations.filter(a=>a.status==='réalisée'); csvRows.push(['Animations Réalisées', escapeCsvValue('Titre'), escapeCsvValue('Type'), escapeCsvValue('Date'), escapeCsvValue('Nb Parts'), escapeCsvValue('Budget Total Tâches (€)')].join(';')); completedAnims.forEach(a=>{ const d=a.dateTime?.toDate?a.dateTime.toDate().toLocaleDateString('fr-FR'):'N/A'; const pC=(a.participantIds||[]).length; const t=a.animationType||'N/D'; const budgetCalc = calculateAnimationBudget(a.id); csvRows.push(['', escapeCsvValue(a.title), escapeCsvValue(t), escapeCsvValue(d), escapeCsvValue(pC), escapeCsvValue(budgetCalc > 0 ? budgetCalc.toFixed(2).replace('.',',') : '0,00')].join(';')); }); if(!completedAnims.length) csvRows.push(['', escapeCsvValue('Aucune'), '', '', '', ''].join(';')); csvRows.push(['', '', '', '', '']); const tComp=completedAnims.length; const membPart=cachedMembers.map(m=>{let c=0; completedAnims.forEach(a=>{if((a.participantIds||[]).includes(m.id))c++;}); const r=tComp>0?(c/tComp)*100:0; return {n:`${m.firstname} ${m.lastname}`,c,r};}).sort((a,b)=>b.c-a.c); csvRows.push(['Participation Membre (Anim. Réalisées)', escapeCsvValue('Nom'), escapeCsvValue('Nb Parts'), escapeCsvValue('Taux (%)'), ''].join(';')); membPart.forEach(m=>csvRows.push(['', escapeCsvValue(m.n), escapeCsvValue(m.c), escapeCsvValue(m.r.toFixed(1).replace('.',',')), ''].join(';'))); if(!membPart.length) csvRows.push(['', escapeCsvValue('Aucun membre'), '', '', ''].join(';')); const csvString = csvRows.join('\n'); const bom = '\uFEFF'; const blob = new Blob([bom + csvString], {type:'text/csv;charset=utf-8;'}); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.setAttribute("href", url); const exportDate = new Date().toISOString().split('T')[0]; link.setAttribute("download", `bilan_qvct_${exportDate}.csv`); link.style.visibility='hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); console.log("Export CSV terminé."); } catch (error) { console.error("Err export CSV:", error); alert("Erreur création CSV."); } };
+    // #endregion
 
-/* Footer */
-.app-footer {
-    background-color: var(--footer-bg);
-    padding: 7px 25px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: auto;
-}
-#footer-auth-container { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-#user-info { align-items: center; font-size: 0.8em; margin-bottom: 0; } /* display:flex vient de .modal */
-#user-info img { width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 8px; }
-#login-btn { margin: 0; width: auto; padding: 6px 12px; font-size: 0.9em; }
-#logout-btn { margin-left: 10px; }
-.copyright-text { font-size: 0.8em; color: var(--text-muted); text-align: right; flex-shrink: 0; }
-/* #endregion */
+    // #region Fonctions Auth
+    const signInWithGoogle = async () => { const provider = new firebase.auth.GoogleAuthProvider(); try { console.log("Tentative connexion Google..."); const result = await auth.signInWithPopup(provider); console.log("Connecté avec Google:", result.user.displayName); } catch (error) { console.error("Erreur connexion Google:", error); if (error.code === 'auth/popup-closed-by-user') { alert("Fenêtre connexion fermée."); } else if (error.code === 'auth/cancelled-popup-request') { console.warn("Popups multiples."); } else if (error.code === 'auth/unauthorized-domain') { alert("Domaine non autorisé. Vérifiez config Firebase.");} else { alert(`Erreur connexion: ${error.message}`); } } };
+    const signOut = async () => { try { await auth.signOut(); console.log("Utilisateur déconnecté."); } catch (error) { console.error("Erreur déconnexion:", error); alert(`Erreur déconnexion: ${error.message}`); } };
+    // #endregion
 
-/* #region --- Styles Pages (Contenu Principal) --- */
-.page {
-    display: none;
-    animation: fadeIn 0.5s ease-in-out;
-}
-.page.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    // #region Event Listener Attachments
+    try { navLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); const pageId = link.getAttribute('href')?.substring(1); if (pageId) navigateTo(pageId, true); }); }); window.addEventListener('popstate', () => { const pageId = window.location.hash.substring(1) || 'dashboard'; navigateTo(pageId, false); }); allCloseBtns.forEach(btn => { const modal = btn.closest('.modal'); if (modal) btn.addEventListener('click', () => closeModal(modal)); }); allModals.forEach(modal => { modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal); }); }); if (editFromDetailBtn) { editFromDetailBtn.addEventListener('click', () => { if (currentDetailAnimationId) { closeModal(animationDetailModal); handleEditAnimation(currentDetailAnimationId); } else { console.warn("Tentative edit depuis détail sans ID."); } }); } else { console.warn('#edit-from-detail-btn manquant'); } if (addMemberBtn) addMemberBtn.addEventListener('click', handleAddMember); else console.warn("#add-member-btn manquant"); if (addAnimationBtn) addAnimationBtn.addEventListener('click', handleAddAnimation); else console.warn("#add-animation-btn manquant"); if (addTaskBtn) addTaskBtn.addEventListener('click', handleAddTask); else console.warn("#add-task-btn manquant"); if (memberForm) memberForm.addEventListener('submit', handleMemberFormSubmit); else console.warn("#member-form manquant"); if (animationForm) animationForm.addEventListener('submit', handleAnimationFormSubmit); else console.warn("#animation-form manquant"); if (taskForm) taskForm.addEventListener('submit', handleTaskFormSubmit); else console.warn("#task-form manquant"); if (taskFilterAnimationSelect) { taskFilterAnimationSelect.addEventListener('change', renderTasks); } else console.warn("#task-filter-animation manquant"); if (animationStatusFilterSelect) { animationStatusFilterSelect.addEventListener('change', renderAnimations); } else { console.warn("#animation-status-filter manquant."); } if (animationViewFilterSelect) { animationViewFilterSelect.addEventListener('change', renderAnimations); } else { console.warn("#animation-view-filter manquant."); } if (exportCsvBtn) { exportCsvBtn.addEventListener('click', handleExportCsvStats); } else { console.warn("#export-csv-btn manquant."); } if (loginBtn) { loginBtn.addEventListener('click', signInWithGoogle); } else { console.warn("#login-btn manquant"); } if (logoutBtn) { logoutBtn.addEventListener('click', signOut); } else { console.warn("#logout-btn manquant"); } } catch (err) { console.error("Erreur attachement listeners:", err); }
+    // #endregion
 
-h2 {
-    color: var(--primary-color);
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--secondary-color);
-    padding-bottom: 10px;
-}
-h2 i { margin-right: 10px; }
-/* #endregion */
+    // #region Observateur d'Authentification et Initialisation
+    console.log("Mise en place de l'observateur d'authentification Firebase...");
+    auth.onAuthStateChanged(async user => { const wasConnected = !!currentUser; currentUser = user; if (user) { console.log("Auth state changed: CONNECTÉ", user.uid, user.email); try { console.log(`Vérif autorisation pour: ${user.email}...`); const authorizedUserRef = authorizedUsersCollection.doc(user.email); const docSnap = await authorizedUserRef.get(); if (docSnap.exists) { console.log("Autorisé."); if (userInfoDiv && userNameSpan && userPhotoImg && loginBtn && logoutBtn) { userNameSpan.textContent = user.displayName || user.email || 'Utilisateur'; userPhotoImg.src = user.photoURL || 'img/placeholder.png'; userPhotoImg.alt = user.displayName || 'Avatar'; userInfoDiv.style.display = 'flex'; loginBtn.style.display = 'none'; logoutBtn.style.display = 'inline-flex'; } if (!isInitialLoadComplete || !wasConnected) { console.log("Chargement initial requis..."); try { await loadAllCaches(true); if (isInitialLoadComplete && typeof resolveInitialLoad === 'function') { console.log("Chargement OK, résolution Promise."); resolveInitialLoad(); resolveInitialLoad = null; } else if (!isInitialLoadComplete) { console.error("ERREUR: loadAllCaches OK mais flag NOK!"); } } catch (loadError) { console.error("Erreur critique loadAllCaches:", loadError); document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top: 50px;">Erreur chargement données initiales. Rechargez.</h1>'; if(auth) await auth.signOut().catch(e => console.error("Err déco forcée:", e)); return; } } else { console.log("Déjà connecté et chargé."); if (typeof resolveInitialLoad === 'function') { console.log("Résolution Promise (redondant)."); resolveInitialLoad(); resolveInitialLoad = null; } } const currentPageId = window.location.hash.substring(1) || 'dashboard'; console.log(`Navigation initiale/post-connexion vers: ${currentPageId}`); navigateTo(currentPageId, !wasConnected); } else { console.warn(`Utilisateur ${user.email} NON AUTORISÉ.`); alert(`Accès refusé pour ${user.email}. Contactez l'admin.`); await auth.signOut(); } } catch (error) { console.error("Erreur vérif autorisation:", error); alert("Erreur vérification droits. Déconnexion."); await auth.signOut(); } } else { console.log("Auth state changed: DÉCONNECTÉ"); currentUser = null; if (userInfoDiv && loginBtn && logoutBtn) { userInfoDiv.style.display = 'none'; loginBtn.style.display = 'block'; logoutBtn.style.display = 'none'; } clearAllCaches(); resetInitialLoadPromise(); console.log("Nettoyage vues/caches déco..."); pages.forEach(p => { if (p.id !== 'dashboard') { p.innerHTML = '<p style="text-align:center; margin-top: 30px; color: var(--danger-color);">Veuillez vous connecter.</p>'; }}); if(statsTotalCompletedEl) statsTotalCompletedEl.textContent = '-'; if(statsAvgParticipationEl) statsAvgParticipationEl.textContent = '-'; if(statsTotalBudgetSpentEl) statsTotalBudgetSpentEl.textContent = '-'; if (statusChartInstance) { statusChartInstance.destroy(); statusChartInstance = null; } if (typeChartInstance) { typeChartInstance.destroy(); typeChartInstance = null; } if (participationChartInstance) { participationChartInstance.destroy(); participationChartInstance = null; } if(statusErrorEl) statusErrorEl.style.display = 'none'; if(typeErrorEl) typeErrorEl.style.display = 'none'; if(participationErrorEl) participationErrorEl.style.display = 'none'; navigateTo('dashboard', false); } });
+    // #endregion
 
-/* #region --- Éléments UI Communs --- */
-/* Boutons */
-.btn { padding: 10px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95em; transition: background-color 0.3s ease, transform 0.1s ease; margin: 5px 5px 15px 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; vertical-align: middle; white-space: nowrap; }
-.btn i { margin-right: 8px; }
-.btn:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.7; }
-.btn:active:not(:disabled) { transform: scale(0.98); }
-.primary-btn { background-color: var(--primary-color); color: var(--text-light); }
-.primary-btn:hover:not(:disabled) { background-color: #5a8a6e; } /* Slightly darker primary */
-.secondary-btn { background-color: var(--secondary-color); color: var(--text-color); }
-.secondary-btn:hover:not(:disabled) { background-color: #95ccac; } /* Slightly darker secondary */
-.success-btn { background-color: var(--success-color); color: var(--text-light); }
-.success-btn:hover:not(:disabled) { background-color: #73b88e; } /* Slightly darker success */
-.danger-btn { background-color: var(--danger-color); color: var(--text-light); }
-.danger-btn:hover:not(:disabled) { background-color: #e06767; } /* Slightly darker danger */
-.btn.btn-small { padding: 4px 8px; font-size: 0.8em; margin: 0; }
-.btn.btn-small i { margin-right: 4px; }
-
-/* Conteneurs de Listes/Grilles */
-.list-container { margin-top: 20px; }
-.list-container > p { /* Message chargement/vide */ grid-column: 1 / -1; width: 100%; text-align: center; color: #777; font-style: italic; padding: 40px 0; }
-
-/* Filtres */
-.filter-container { margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 15px; }
-.filter-container label { margin-right: 5px; font-weight: bold; }
-.filter-container select, .filter-container input[type="search"] { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 0.95em; background-color: #fff; }
-.filter-container select { min-width: 180px; }
-.filter-container input[type="search"] { min-width: 200px; }
-
-/* Modales */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); animation: fadeInModal 0.3s ease-in-out; }
-@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-.modal-content { background-color: #fefefe; margin: 8% auto; padding: 30px 40px; border: 1px solid var(--border-color); width: 90%; border-radius: 8px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-#member-form-modal .modal-content, #task-form-modal .modal-content { max-width: 550px; }
-#animation-form-modal .modal-content, #document-form-modal .modal-content { max-width: 650px; } /* Ajout document */
-#task-list-modal .modal-content { max-width: 700px; }
-.modal-lg { max-width: 800px; }
-.close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; z-index: 10; }
-.close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
-
-/* Formulaires Modales */
-.modal form { margin-top: 15px; }
-.modal form label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.95em; }
-.modal form label:not([for]) { margin-bottom: 8px; }
-.modal form input[type="text"], .modal form input[type="email"], .modal form input[type="url"], .modal form input[type="datetime-local"], .modal form input[type="date"], .modal form input[type="number"], .modal form select, .modal form textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 1em; font-family: inherit; margin-bottom: 10px; background-color: #fff; transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
-.modal form input:focus, .modal form select:focus, .modal form textarea:focus { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(108, 157, 126, 0.2); outline: none; }
-.modal form textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
-.modal form button[type="submit"] { margin-top: 25px; width: 100%; padding: 12px; font-size: 1.1em; }
-
-/* Checkbox List */
-.checkbox-list { max-height: 160px; overflow-y: auto; border: 1px solid var(--border-color); padding: 15px; margin-top: 0; margin-bottom: 15px; background-color: #fdfdfd; border-radius: 4px; }
-.checkbox-list label { display: block; margin-bottom: 10px; font-weight: normal; cursor: pointer; margin-top: 0; font-size: 0.9em; line-height: 1.3; }
-.checkbox-list label:last-child { margin-bottom: 0; }
-.checkbox-list input[type="checkbox"] { margin-right: 10px; vertical-align: middle; width: 16px; height: 16px; cursor: pointer; }
-.checkbox-list p { color: #888; font-style: italic; text-align: center; margin: 10px 0; }
-
-/* Styles Imgur Upload (pour section documents) */
-#imgur-status { margin-left: 10px; font-size: 0.85em; font-style: italic; }
-#imgur-status.error { color: var(--danger-color); font-weight: bold; }
-#imgur-status.success { color: var(--success-color); }
-
-/* Modale Tâches Liées (Task List Modal) */
-#task-list-modal h3 { color: var(--primary-color); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-.modal-task-list-container { margin-top: 15px; max-height: 60vh; overflow-y: auto; padding-right: 10px; }
-.modal-task-item { padding: 12px 0; border-bottom: 1px dashed var(--border-color); display: flex; flex-direction: column; gap: 5px; }
-.modal-task-item:last-child { border-bottom: none; }
-.modal-task-item .task-desc { font-weight: 600; color: var(--text-color); font-size: 1em; }
-.modal-task-item .task-detail { font-size: 0.85em; color: #666; display: flex; align-items: center; }
-.modal-task-item .task-detail i { width: 16px; text-align: center; margin-right: 8px; color: var(--neutral-color); opacity: 0.9; }
-.modal-task-item .task-detail i.fa-user, .modal-task-item .task-detail i.fa-users { color: var(--info-color); }
-.modal-task-item .task-detail i.fa-clock { color: var(--danger-color); opacity: 0.8;}
-.modal-task-item .task-detail i.fa-check-circle { color: var(--success-color); }
-.modal-task-item .task-detail i.fa-spinner { color: var(--primary-color); animation: fa-spin 2s infinite linear; }
-.modal-task-item .task-detail i.fa-circle { color: var(--warning-color); }
-.modal-task-item .task-detail .text-danger { color: var(--danger-color); font-weight: bold; }
-.modal-task-list-container > p { text-align: center; color: #888; font-style: italic; padding: 30px 0; }
-
-/* Badges */
-.badge { display: inline-block; padding: 0.3em 0.6em; font-size: 0.75em; font-weight: bold; line-height: 1; color: #fff; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.8rem; margin-left: 5px; }
-.badge.danger { background-color: var(--danger-color); }
-.badge.budget-badge { background-color: var(--success-color); }
-
-/* Chart Error Messages */
-.chart-error-message { font-size: 0.9em; text-align: center; margin-top: 15px; font-style: italic; color: #888; }
-.chart-error-message.error { color: var(--danger-color); font-weight: bold; }
-/* #endregion */
-
-/* #region --- Styles Dashboard --- */
-.dashboard-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 20px; }
-.summary-card { background-color: #fff; padding: 20px 25px; border-radius: 8px; box-shadow: var(--shadow); border-left-style: solid; border-left-width: 5px; display: flex; flex-direction: column; }
-/* Couleurs spécifiques bordures */
-.summary-card:nth-child(1) { border-left-color: var(--accent-color); } .summary-card:nth-child(1) h3 i { color: var(--accent-color); } .summary-card:nth-child(1) p:first-of-type { color: var(--accent-color); }
-.summary-card:nth-child(2) { border-left-color: var(--primary-color); } .summary-card:nth-child(2) h3 i { color: var(--primary-color); } .summary-card:nth-child(2) p:first-of-type { color: var(--primary-color); }
-.summary-card:nth-child(3) { border-left-color: var(--danger-color); } .summary-card:nth-child(3) h3 i { color: var(--danger-color); } .summary-card:nth-child(3) p:first-of-type { display: none; }
-.summary-card:nth-child(4) { border-left-color: var(--success-color); } .summary-card:nth-child(4) h3 i { color: var(--success-color); } .summary-card:nth-child(4) p#planned-budget-total { color: var(--success-color); font-size: 2.2em; }
-.summary-card.chart-card { border-left-color: var(--link-color); } .summary-card.chart-card h3 i { color: var(--link-color); }
-.summary-card.annual-budget-card { border-left-color: var(--info-color); } .summary-card.annual-budget-card h3 i { color: var(--info-color); } .summary-card.annual-budget-card p#remaining-annual-budget { color: var(--info-color); font-size: 2.2em; }
-
-.summary-card h3 { margin-bottom: 15px; font-size: 1.15em; color: #444; display: flex; align-items: center; justify-content: space-between; }
-.summary-card h3 i { margin-right: 10px; font-size: 1.2em; opacity: 0.8; }
-.summary-card p:first-of-type { font-size: 2.5em; font-weight: bold; margin-bottom: 15px; line-height: 1; text-align: center; }
-.summary-card ul { list-style: none; padding-left: 0; font-size: 0.9em; flex-grow: 1; margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 15px; }
-.summary-card:nth-child(3) ul { margin-top: 0; border-top: none; padding-top: 0; } /* Pas de bordure pour échéances */
-.summary-card li { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #eee; line-height: 1.4; }
-.summary-card li:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-.summary-card li.no-items { color: #888; font-style: italic; text-align: center; border-bottom: none; padding: 15px 0; }
-.dashboard-date { font-weight: bold; color: #555; margin-right: 8px; }
-.dashboard-name { color: #777; font-style: italic; margin-left: 5px; }
-.dashboard-status { font-style: italic; font-size: 0.9em; margin-left: 5px; }
-.dashboard-status.realisee { color: var(--success-color); }
-.dashboard-status.annulee { color: var(--danger-color); }
-#deadlines-list .overdue { color: var(--danger-color); font-weight: bold; }
-#deadlines-list .due-soon { color: var(--warning-color); }
-.dashboard-details-text { font-size: 0.8em; color: #777; text-align: center; margin-top: 5px; line-height: 1.3; border-top: none; padding-top: 0; }
-#budget-details-info { font-size: 0.7em; }
-#remaining-budget-details { font-size: 0.7em; }
-.dashboard-details-text.loading-error { font-style: italic; color: #a0a0a0; }
-.summary-card.chart-card { padding: 15px 20px; }
-.summary-card.chart-card h3 { text-align: center; margin-bottom: 20px; justify-content: center; }
-.chart-container.dashboard-chart-container { position: relative; height: 250px; width: 100%; }
-.calendar-wrapper { margin-top: 0; background-color: #fff; padding: 25px; border-radius: var(--border-radius-large); box-shadow: var(--card-shadow); border: 1px solid var(--border-color); }
-.dashboard-summary > .grid-full-width { grid-column: 1 / -1; }
-.calendar-wrapper h3 { text-align: center; color: var(--primary-color); margin-bottom: 25px; font-size: 1.2em; font-weight: 600; }
-.calendar-wrapper h3 i { margin-right: 10px; opacity: 0.85; }
-#dashboard-calendar { min-height: 450px; width: 100%; max-width: none; margin: 0; }
-/* #endregion */
-
-/* #region --- Styles Cartes Génériques --- */
-.animation-card, .task-card, .member-card, .document-card {
-    background-color: #fff;
-    border-radius: var(--border-radius-medium);
-    box-shadow: var(--card-shadow);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-    border-left-style: solid;
-    border-left-width: 5px;
-    min-height: 180px; /* Hauteur minimale de base */
-}
-.animation-card:hover, .task-card:hover, .member-card:hover, .document-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--card-hover-shadow);
-}
-.animation-card .card-body, .task-card .card-body, .member-card .card-body, .document-card .card-body {
-    padding: 15px 18px; /* Padding unifié */
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* Espacement unifié */
-}
-.animation-card .card-footer, .task-card .card-footer, .member-card .card-footer, .document-card .card-footer {
-    padding: 8px 15px; /* Padding unifié */
-    background-color: #f9fafb; /* Fond unifié */
-    border-top: 1px solid var(--border-color);
-    margin-top: auto;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
-}
-.animation-card .card-footer .btn, .task-card .card-footer .btn, .member-card .card-footer .btn, .document-card .card-footer .btn {
-    margin: 0; /* Annuler marges */
-    /* Utilise .btn-small via HTML */
-}
-.animation-card .detail-item, .task-card .card-detail, .member-card .member-detail, .document-card .card-detail {
-    display: flex;
-    align-items: flex-start;
-    font-size: 0.85em;
-    color: #555;
-    line-height: 1.4;
-}
-.animation-card .detail-item i, .task-card .card-detail i, .member-card .member-detail i, .document-card .card-detail i {
-    width: 16px;
-    text-align: center;
-    margin-right: 8px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-.animation-card .detail-item span, .task-card .card-detail span, .member-card .member-detail span, .document-card .card-detail span, .document-card .card-detail a {
-    word-break: break-word;
-}
-.animation-card .card-header h3, .task-card .task-description, .member-card .member-name, .document-card .doc-title {
-    font-weight: 600;
-    color: var(--primary-color);
-    font-size: 1.05em; /* Taille de base titre */
-    line-height: 1.4;
-    margin: 0 0 8px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-/* #endregion */
-
-/* #region --- Styles Spécifiques Cartes --- */
-/* Grilles */
-.animation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
-.task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.member-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.document-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-
-/* Animations */
-.animation-card { min-height: 270px; } /* Plus haute */
-.animation-card.status-prévue { border-left-color: var(--accent-color); }
-.animation-card.status-en-cours { border-left-color: var(--secondary-color); }
-.animation-card.status-réalisée { border-left-color: var(--success-color); }
-.animation-card.status-annulée { border-left-color: var(--danger-color); }
-.animation-card .card-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); background-color: rgba(108, 157, 126, 0.05); }
-.animation-card .card-header h3 { margin-bottom: 0; font-size: 1.2em; } /* Titre plus grand */
-.animation-card .card-body { gap: 12px; padding: 15px 20px; } /* Padding/gap spécifiques si besoin */
-.card-details-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 15px; padding-bottom: 8px; border-bottom: 1px dashed #eee; }
-.card-details-row:last-of-type { border-bottom: none; padding-bottom: 0; }
-.card-details-row.compact .detail-item.location { min-width: 70px; flex-shrink: 1; }
-.card-details-row.secondary { margin-bottom: 5px; }
-.card-details-row.secondary .detail-item { font-size: 0.8em; color: #777; }
-.card-details-row.secondary .detail-item i { opacity: 0.65; margin-right: 4px; }
-.detail-item.date i { color: var(--primary-color); } .detail-item.type i { color: var(--secondary-color); } .detail-item.location i { color: var(--accent-color); } .detail-item.status i { color: var(--neutral-color); } .detail-item.budget i { color: var(--warning-color); } .detail-item.participants i { color: var(--info-color); } .detail-item.docs i { color: var(--link-color); }
-.animation-card .card-description { font-size: 0.9em; color: #555; line-height: 1.5; margin-top: 5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; /* Moins de lignes */ overflow: hidden; text-overflow: ellipsis; }
-.card-description.no-description { color: #999; font-style: italic; -webkit-line-clamp: 2; }
-.animation-card .show-tasks-btn { background-color: #6c757d; color: var(--text-light); }
-.animation-card .show-tasks-btn:hover:not(:disabled) { background-color: #5a6268; }
-
-/* Tâches */
-.task-card { border-left-color: var(--neutral-color); } /* Couleur par défaut */
-.task-card.status-à-faire { border-left-color: var(--warning-color); }
-.task-card.status-en-cours { border-left-color: var(--primary-color); }
-.task-card.status-terminé { border-left-color: var(--neutral-color); opacity: 0.7; }
-.task-card.status-terminé .task-description { text-decoration: line-through; }
-.task-card .card-detail i.fa-link { color: var(--secondary-color); opacity: 1; }
-.task-card .card-detail i.fa-user, .task-card .card-detail i.fa-users { color: var(--info-color); opacity: 1; }
-.task-card .card-detail i.fa-clock { color: var(--danger-color); opacity: 0.8; }
-.task-card .card-detail i.fa-info-circle { color: var(--neutral-color); opacity: 1;}
-.task-card .card-detail i.fa-euro-sign { color: var(--warning-color); } /* Pour budget tâche */
-
-/* Membres */
-.member-card { border-left-color: var(--info-color); min-height: 160px; }
-.member-card .card-body { padding: 15px 20px; gap: 10px; } /* Padding spécifique si besoin */
-.member-card .member-detail i { color: var(--info-color); opacity: 0.8; }
-
-/* Documents */
-.document-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Légèrement plus large pour miniature */
-    gap: 25px;
-}
-
-/* Styles communs de la carte (hérités de la section générique) */
-.document-card {
-    /* background, radius, shadow, flex-direction, overflow, transition => Gérés par style générique */
-    border-left-color: var(--link-color); /* Spécifique */
-     min-height: 160px; /* Hauteur minimale peut être plus petite avec miniature */
-}
-.document-card:hover {
-    /* transform, box-shadow => Gérés par style générique */
-}
-
-/* Corps de la carte AVEC miniature */
-.document-card .card-body.doc-card-body-with-thumb {
-    padding: 15px; /* Padding uniforme */
-    flex-grow: 1;
-    display: flex; /* Activer Flexbox */
-    align-items: flex-start; /* Aligner en haut */
-    gap: 15px; /* Espace entre miniature et infos */
-}
-
-/* Conteneur pour la miniature/icône */
-.document-card .doc-thumbnail {
-    flex-shrink: 0;
-    width: 75px;
-    height: 75px;
-    background-color: #f0f4f1;
-    border-radius: var(--border-radius-small);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border: 1px solid var(--border-color);
-}
-
-/* Image miniature */
-.document-card .doc-thumbnail img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.document-card:hover .doc-thumbnail img {
-    transform: scale(1.05);
-}
-
-/* Icône placeholder */
-.document-card .doc-thumbnail i {
-    color: var(--text-muted);
-    opacity: 0.7;
-    /* La taille fa-3x est définie dans le JS */
-}
-
-/* Conteneur pour les informations textuelles */
-.document-card .doc-info {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px; /* Espace vertical entre détails */
-    min-width: 0; /* Empêche le débordement */
-}
-
-/* Titre dans le bloc info */
-.document-card .doc-title {
-    /* font-size, weight, color, margin, overflow => Hérités du style générique .doc-title */
-    margin-bottom: 5px; /* Ajuster marge si nécessaire */
-}
-.document-card .doc-title i {
-    /* margin, opacity, width, text-align => Hérités du style générique */
-    color: var(--link-color); /* Spécifique */
-}
-
-/* Détails dans le bloc info */
-.document-card .doc-info .card-detail {
-    /* display, align-items, font-size, color, line-height => Hérités du style générique */
-}
-.document-card .doc-info .card-detail i {
-    /* width, text-align, margin-right, color(défaut), flex-shrink, margin-top => Hérités */
-}
-/* Couleurs spécifiques */
-.document-card .doc-info .card-detail i.fa-calendar-plus { color: var(--secondary-color); }
-.document-card .doc-info .card-detail i.fa-tasks,
-.document-card .doc-info .card-detail i.fa-calendar-alt { color: var(--info-color); }
-.document-card .doc-info .card-detail i.fa-info-circle { color: var(--neutral-color); }
-
-/* Footer (hérite des styles génériques .card-footer) */
-.document-card .card-footer {
-     /* padding, background, border, margin, display, justify, align, gap => Hérités */
-}
-.document-card .card-footer .btn {
-    /* margin, styles .btn-small => Hérités/appliqués par HTML */
-}
-
-/* #region --- Section Statistiques --- */
-#stats .stats-container { margin-bottom: 30px; }
-#stats .stat-card { border-radius: 8px; /* Garder bordures dashboard */ }
-#stats .stat-card h3 i { color: inherit; }
-#stats .stat-card:nth-child(1) { border-left-color: var(--success-color); } #stats .stat-card:nth-child(1) h3 i, #stats .stat-card:nth-child(1) p { color: var(--success-color); }
-#stats .stat-card:nth-child(2) { border-left-color: var(--info-color); } #stats .stat-card:nth-child(2) h3 i, #stats .stat-card:nth-child(2) p { color: var(--info-color); }
-#stats .stat-card:nth-child(3) { border-left-color: var(--warning-color); } #stats .stat-card:nth-child(3) h3 i, #stats .stat-card:nth-child(3) p { color: var(--warning-color); }
-.stats-details-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: var(--shadow); align-items: start; }
-.stat-chart-block { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
-.stat-chart-block.full-width { grid-column: 1 / -1; }
-.stat-chart-block h4 { font-size: 1.1em; color: var(--primary-color); margin-bottom: 20px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); text-align: center; }
-.stat-chart-block h4 i { margin-right: 8px; opacity: 0.8; }
-.chart-container { position: relative; height: 280px; width: 100%; }
-.chart-container.large { height: 400px; }
-.chart-container canvas { max-width: 100%; max-height: 100%; }
-.export-buttons { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center; }
-.export-buttons .btn { margin: 0 10px; }
-/* #endregion */
-
-/* #region --- Styles Responsive --- */
-@media (max-width: 1200px) { .main-content { padding: 25px; padding-top: calc(var(--header-height) + 25px); padding-bottom: 75px; } .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } .app-header { padding: 0 20px; } .app-footer { padding: 8px 20px; } }
-@media (max-width: 992px) { .app-header { padding: 0 15px; height: auto; min-height: 55px; flex-wrap: wrap; position: sticky; } #header-logo { height: 35px; margin-right: 10px; } .app-header h1 { font-size: 1.2em; margin-bottom: 5px; } .header-brand { flex-shrink: 1; } .header-nav { width: 100%; order: 3; justify-content: center; margin-top: 5px; } .header-nav ul { justify-content: center; flex-wrap: wrap; } .header-nav a { width: 38px; height: 38px; padding: 8px; } .header-nav a i { font-size: 1em; } .header-auth { margin-left: auto; order: 2; } .main-content { padding: 20px; padding-top: 85px; padding-bottom: 70px; } .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } .app-footer { padding: 7px 15px; justify-content: center; text-align: center; } #footer-auth-container { justify-content: center; order: 1; margin-bottom: 5px; } .copyright-text { width: 100%; text-align: center; order: 2; font-size: 0.75em; } .modal-content { margin: 10% auto; width: 90%; padding: 25px; } .animation-grid, .task-grid, .member-grid, .document-grid { gap: 18px; } }
-@media (max-width: 767px) { .app-header { min-height: 50px; } .app-header h1 { display: none !important; } #header-logo { height: 30px; } .header-nav ul { gap: 2px; justify-content: space-around; } .header-nav a { width: 36px; height: 36px; } .main-content { padding: 15px; padding-top: 80px; padding-bottom: 65px; } .dashboard-summary, .stats-details-container, .animation-grid, .task-grid, .member-grid, .document-grid { grid-template-columns: 1fr; gap: 15px; } .summary-card.chart-card, .stat-chart-block.full-width { grid-column: 1 / -1; } .app-footer { padding: 6px 10px; flex-direction: column; } #footer-auth-container { margin-bottom: 8px; } .copyright-text { font-size: 0.7em; } .modal-content { margin: 8% auto; width: 95%; padding: 20px; } .modal form label { font-size: 0.9em; } .modal form input, .modal form select, .modal form textarea { padding: 10px; } .modal form button[type="submit"] { padding: 10px; font-size: 1em;} .checkbox-list { max-height: 140px; } .filter-container { flex-direction: column; align-items: stretch; } .filter-container label { margin-bottom: 3px; } .filter-container select, .filter-container input[type="search"] { width: 100%; min-width: 0;} }
-@media (max-width: 480px) { .app-header { padding: 0 10px; } .app-header h1 { display: none; } #header-logo { height: 28px; margin-right: 8px; } .header-nav ul { gap: 1px; } .header-nav a { width: 34px; height: 34px; padding: 5px; } .header-nav a i { font-size: 0.9em; } .main-content { padding: 10px; padding-top: 75px; padding-bottom: 60px; } /* Tailles textes cartes */ .summary-card h3 { font-size: 1em; } .summary-card p { font-size: 2em; } .animation-card .card-header h3, .task-card .task-description, .member-card .member-name, .document-card .doc-title { font-size: 1em; } .animation-card .detail-item, .task-card .card-detail, .member-card .member-detail, .document-card .card-detail { font-size: 0.8em; } .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 3; } .card-footer .btn { font-size: 0.8em; padding: 5px 8px;} .modal-content { margin: 5% auto; padding: 15px; } .checkbox-list { max-height: 120px; } }
-/* #endregion */
-
-/* #region --- Animations & Utilitaires --- */
-/* Classe utilitaire pour masquer initialement les cartes pour l'animation */
-.card-hidden {
-    opacity: 0;
-    transform: translateY(20px);
-    /* La transition est définie sur la carte elle-même */
-}
-/* Animation spinner */
-@keyframes fa-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-/* #endregion */
+    // --- Fin DOMContentLoaded ---
+});
