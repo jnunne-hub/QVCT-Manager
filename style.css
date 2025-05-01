@@ -529,7 +529,21 @@ h2 i { margin-right: 10px; }
 /* #endregion */
 
 /* #region --- Styles Responsive --- */
-@media (max-width: 1200px) { .main-content { padding: 25px; padding-top: calc(var(--header-height) + 25px); padding-bottom: 75px; } .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } .app-header { padding: 0 20px; } .app-footer { padding: 8px 20px; } }
+@media (max-width: 1200px) { 
+   .main-content { padding: 25px; padding-top: calc(var(--header-height) + 25px); padding-bottom: 75px; } 
+   .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } 
+   .summary-card.chart-card {
+       /* MODIFIER CETTE LIGNE : */
+       grid-column: 1 / -1; /* Fait prendre à la carte toute la largeur de la grille */
+       /* '1 / -1' signifie de la 1ère ligne de colonne à la dernière */
+    }
+
+    /* La règle pour le calendrier devrait déjà exister */
+    .dashboard-summary > .grid-full-width {
+       grid-column: 1 / -1; /* S'assurer que le calendrier prend aussi toute la largeur */
+    }
+   .app-header { padding: 0 20px; } 
+   .app-footer { padding: 8px 20px; } }
 @media (max-width: 992px) { 
    .app-header { padding: 0 15px; height: auto; min-height: 55px; flex-wrap: wrap; position: sticky; } 
    #header-logo { height: 35px; margin-right: 10px; } 
