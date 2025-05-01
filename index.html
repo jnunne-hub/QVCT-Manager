@@ -181,11 +181,11 @@
                     <div class="filter-container" style="margin-bottom: 20px;"> <!-- Ajuster marge si besoin -->
                          <!-- Filtre de Vue (Nouveau) -->
                          <label for="animation-view-filter" style="margin-right: 5px; font-weight: bold;">Afficher:</label>
-                         <select id="animation-view-filter">
-                             <option value="active" selected>Vue Active</option> <!-- Défaut -->
-                             <option value="archived">Archives</option>
-                             <option value="all">Toutes les Vues</option>
-                         </select>
+                        <select id="animation-view-filter">
+                            <option value="active">Vue Active</option>   <!-- Texte corrigé, PAS selected -->
+                            <option value="archived">Archives</option>
+                            <option value="all" selected>Toutes les Vues</option> <!-- Texte OK et selected ICI -->
+                        </select>
 
                          <!-- Filtre par Statut (Existant) -->
                          <label for="animation-status-filter" style="margin-left: 15px; margin-right: 5px; font-weight: bold;">Filtrer par statut </label>
@@ -251,7 +251,7 @@
 
                             <!-- ================== -->
                             <!-- NOUVEAU CHAMP BUDGET -->
-                            <!-- ================== -->
+                            <!-- ==================
                             <label for="animation-budget">Budget prévisionnel (€):</label>
                             <input type="number" id="animation-budget" min="0" step="1" placeholder="Ex: 500">
                             <!-- ================== -->
@@ -347,6 +347,8 @@
                                  <option value="en cours">En cours</option>
                                  <option value="terminé">Terminé</option>
                              </select>
+                            <label for="task-budget">Budget alloué (€) (optionnel):</label>
+                            <input type="number" id="task-budget" min="0" step="any" placeholder="Ex: 50.50">
 
                              <button type="submit" class="btn success-btn">Enregistrer</button>
                         </form>
@@ -389,12 +391,86 @@
                     </div>
                 </div>
             </section>
+
             <!-- Section Documents -->
-            <section id="documents" class="page">
-                 <!-- ... contenu inchangé ... -->
-                  <h2><i class="fas fa-folder-open"></i> Documents et Ressources</h2>
-                <p>Gestion des documents à venir...</p>
-            </section>
+<section id="documents" class="page">
+    <h2><i class="fas fa-folder-open"></i> Documents et Ressources</h2>
+
+    <!-- Bouton Ajout -->
+    <button id="add-document-btn" class="btn primary-btn"><i class="fas fa-plus"></i> Ajouter un Document</button>
+
+    <!-- Zone de Filtres/Recherche -->
+    <div class="filter-container" style="margin-top: 20px; margin-bottom: 20px;">
+        <label for="doc-type-filter">Filtrer par type:</label>
+        <select id="doc-type-filter">
+            <option value="all">Tous les types</option>
+            <option value="facture">Factures</option>
+            <option value="affiche">Affiches</option>
+            <option value="compte-rendu">Comptes-Rendus</option>
+            <option value="autre">Autres</option>
+        </select>
+
+        <label for="doc-search" style="margin-left: 15px;">Rechercher (titre/desc.):</label>
+        <input type="search" id="doc-search" placeholder="Entrez des mots-clés...">
+        <button id="doc-filter-btn" class="btn secondary-btn btn-small" style="margin-left: 5px;"><i class="fas fa-filter"></i> Filtrer</button>
+    </div>
+
+    <!-- Conteneur pour la liste des documents -->
+    <div id="document-list" class="list-container document-grid"> <!-- Utiliser une grille comme les autres sections -->
+        <p>Chargement des documents...</p>
+        <!-- Les cartes documents seront injectées ici par JS -->
+    </div>
+
+    <!-- Modale Ajout/Modification Document -->
+    <div id="document-form-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">×</span>
+            <h3 id="document-form-title">Ajouter un Document</h3>
+            <form id="document-form">
+                <input type="hidden" id="document-id">
+
+                <label for="document-title">Titre du Document:</label>
+                <input type="text" id="document-title" required>
+
+                <label for="document-url">Lien URL du Document:</label>
+                <input type="url" id="document-url" placeholder="https://..." required> <!-- type="url" pour validation navigateur basique -->
+<!-- AJOUT pour Upload Imgur -->
+                <div style="margin-top: 5px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <button type="button" id="imgur-upload-btn" class="btn secondary-btn btn-small">
+                        <i class="fas fa-upload"></i> Uploader Image (Imgur)
+                    </button>
+                    <input type="file" id="imgur-upload-input" accept="image/*" style="display: none;">
+                    <span id="imgur-status" style="font-size: 0.8em; font-style: italic; color: var(--text-muted);"></span>
+                </div>
+                <!-- FIN AJOUT Imgur -->
+                <label for="document-type">Type de Document:</label>
+                <select id="document-type" required>
+                    <option value="">-- Choisir un type --</option>
+                    <option value="facture">Facture (Liée à une Tâche)</option>
+                    <option value="affiche">Affiche (Liée à une Animation)</option>
+                    <option value="compte-rendu">Compte-Rendu COPIL</option>
+                    <option value="autre">Autre</option>
+                </select>
+
+                <!-- Section pour lier le document (apparaît conditionnellement) -->
+                <div id="document-linking-section" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                    <label id="document-link-label" for="document-linked-item">Lier à :</label>
+                    <select id="document-linked-item">
+                        <option value="">-- Ne pas lier --</option>
+                        <!-- Options chargées par JS (Tâches ou Animations) -->
+                    </select>
+                </div>
+
+                <label for="document-description">Description (optionnel):</label>
+                <textarea id="document-description" rows="3"></textarea>
+
+                <button type="submit" class="btn success-btn">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+
+</section>
+            
             <!-- Section Stats -->
             <section id="stats" class="page">
                  <!-- ... contenu inchangé ... -->
@@ -479,5 +555,6 @@
 
     <!-- Notre script principal, chargé APRÈS l'initialisation de Firebase -->
     <script src="script.js"></script>
+    <script src="documents.js"></script>
 </body>
 </html>
