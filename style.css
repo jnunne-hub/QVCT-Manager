@@ -530,7 +530,35 @@ h2 i { margin-right: 10px; }
 
 /* #region --- Styles Responsive --- */
 @media (max-width: 1200px) { .main-content { padding: 25px; padding-top: calc(var(--header-height) + 25px); padding-bottom: 75px; } .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } .app-header { padding: 0 20px; } .app-footer { padding: 8px 20px; } }
-@media (max-width: 992px) { .app-header { padding: 0 15px; height: auto; min-height: 55px; flex-wrap: wrap; position: sticky; } #header-logo { height: 35px; margin-right: 10px; } .app-header h1 { font-size: 1.2em; margin-bottom: 5px; } .header-brand { flex-shrink: 1; } .header-nav { width: 100%; order: 3; justify-content: center; margin-top: 5px; } .header-nav ul { justify-content: center; flex-wrap: wrap; } .header-nav a { width: 38px; height: 38px; padding: 8px; } .header-nav a i { font-size: 1em; } .header-auth { margin-left: auto; order: 2; } .main-content { padding: 20px; padding-top: 85px; padding-bottom: 70px; } .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } .app-footer { padding: 7px 15px; justify-content: center; text-align: center; } #footer-auth-container { justify-content: center; order: 1; margin-bottom: 5px; } .copyright-text { width: 100%; text-align: center; order: 2; font-size: 0.75em; } .modal-content { margin: 10% auto; width: 90%; padding: 25px; } .animation-grid, .task-grid, .member-grid, .document-grid { gap: 18px; } }
+@media (max-width: 992px) { 
+   .app-header { padding: 0 15px; height: auto; min-height: 55px; flex-wrap: wrap; position: sticky; } 
+   #header-logo { height: 35px; margin-right: 10px; } 
+   .app-header h1 { font-size: 1.2em; margin-bottom: 5px; } 
+   .header-brand { flex-shrink: 1; } 
+   .header-nav { width: 100%; order: 3; justify-content: center; margin-top: 5px; } 
+   .header-nav ul { justify-content: center; flex-wrap: wrap; } 
+   .header-nav a { width: 38px; height: 38px; padding: 8px; } 
+   .header-nav a i { font-size: 1em; } .header-auth { margin-left: auto; order: 2; } 
+   .main-content { padding: 20px; padding-top: 85px; padding-bottom: 70px; } 
+   .dashboard-summary { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } 
+   .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } 
+   .summary-card.chart-card {
+       /* MODIFIER CETTE LIGNE : */
+       grid-column: 1 / -1; /* Fait prendre à la carte toute la largeur de la grille */
+       /* '1 / -1' signifie de la 1ère ligne de colonne à la dernière */
+    }
+
+    /* La règle pour le calendrier devrait déjà exister */
+    .dashboard-summary > .grid-full-width {
+       grid-column: 1 / -1; /* S'assurer que le calendrier prend aussi toute la largeur */
+    }
+   .app-footer { padding: 7px 15px; justify-content: center; text-align: center; } 
+   #footer-auth-container { justify-content: center; order: 1; margin-bottom: 5px; } 
+   .copyright-text { width: 100%; text-align: center; order: 2; font-size: 0.75em; } 
+   .modal-content { margin: 10% auto; width: 90%; padding: 25px; } 
+   .animation-grid, .task-grid, .member-grid, .document-grid { gap: 18px; } 
+}
+
 @media (max-width: 767px) { .app-header { min-height: 50px; } .app-header h1 { display: none !important; } #header-logo { height: 30px; } .header-nav ul { gap: 2px; justify-content: space-around; } .header-nav a { width: 36px; height: 36px; } .main-content { padding: 15px; padding-top: 80px; padding-bottom: 65px; } .dashboard-summary, .stats-details-container, .animation-grid, .task-grid, .member-grid, .document-grid { grid-template-columns: 1fr; gap: 15px; } .summary-card.chart-card, .stat-chart-block.full-width { grid-column: 1 / -1; } .app-footer { padding: 6px 10px; flex-direction: column; } #footer-auth-container { margin-bottom: 8px; } .copyright-text { font-size: 0.7em; } .modal-content { margin: 8% auto; width: 95%; padding: 20px; } .modal form label { font-size: 0.9em; } .modal form input, .modal form select, .modal form textarea { padding: 10px; } .modal form button[type="submit"] { padding: 10px; font-size: 1em;} .checkbox-list { max-height: 140px; } .filter-container { flex-direction: column; align-items: stretch; } .filter-container label { margin-bottom: 3px; } .filter-container select, .filter-container input[type="search"] { width: 100%; min-width: 0;} }
 @media (max-width: 480px) { .app-header { padding: 0 10px; } .app-header h1 { display: none; } #header-logo { height: 28px; margin-right: 8px; } .header-nav ul { gap: 1px; } .header-nav a { width: 34px; height: 34px; padding: 5px; } .header-nav a i { font-size: 0.9em; } .main-content { padding: 10px; padding-top: 75px; padding-bottom: 60px; } /* Tailles textes cartes */ .summary-card h3 { font-size: 1em; } .summary-card p { font-size: 2em; } .animation-card .card-header h3, .task-card .task-description, .member-card .member-name, .document-card .doc-title { font-size: 1em; } .animation-card .detail-item, .task-card .card-detail, .member-card .member-detail, .document-card .card-detail { font-size: 0.8em; } .animation-card .card-description { font-size: 0.85em; -webkit-line-clamp: 3; } .card-footer .btn { font-size: 0.8em; padding: 5px 8px;} .modal-content { margin: 5% auto; padding: 15px; } .checkbox-list { max-height: 120px; } }
 /* #endregion */
