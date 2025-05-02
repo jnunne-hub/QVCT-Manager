@@ -558,13 +558,13 @@ h2 i { margin-right: 10px; }
    .stats-details-container { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } 
    .summary-card.chart-card {
        /* MODIFIER CETTE LIGNE : */
-       grid-column: 1 / -1; /* Fait prendre à la carte toute la largeur de la grille */
+       grid-column: 1 / -1; !important;/* Fait prendre à la carte toute la largeur de la grille */
        /* '1 / -1' signifie de la 1ère ligne de colonne à la dernière */
     }
 
     /* La règle pour le calendrier devrait déjà exister */
     .dashboard-summary > .grid-full-width {
-       grid-column: 1 / -1; /* S'assurer que le calendrier prend aussi toute la largeur */
+       grid-column: 1 / -1; !important;/* S'assurer que le calendrier prend aussi toute la largeur */
     }
    .app-footer { padding: 7px 15px; justify-content: center; text-align: center; } 
    #footer-auth-container { justify-content: center; order: 1; margin-bottom: 5px; } 
