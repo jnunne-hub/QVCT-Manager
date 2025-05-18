@@ -1,0 +1,54 @@
+{
+  "name": "CoPil QVCT Dashboard",
+  "short_name": "CoPil QVCT",
+  "description": "Tableau de bord pour la gestion de la Qualité de Vie et Conditions de Travail.",
+  "lang": "fr-FR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E2030",
+  "theme_color": "#2A2D43",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+    // Vous pouvez ajouter d'autres tailles de PNG ici si vous les avez créées
+    // {
+    //   "src": "/icons/icon-144x144.png",
+    //   "sizes": "144x144",
+    //   "type": "image/png",
+    //   "purpose": "any"
+    // }
+  ],
+  "screenshots": [
+    // Optionnel: Ajoutez des captures d'écran de votre application
+    // {
+    //   "src": "/screenshots/screenshot1.png",
+    //   "sizes": "1080x1920",
+    //   "type": "image/png",
+    //   "form_factor": "narrow" // "wide" pour desktop
+    // },
+    // {
+    //   "src": "/screenshots/screenshot2_desktop.png",
+    //   "sizes": "1920x1080",
+    //   "type": "image/png",
+    //   "form_factor": "wide"
+    // }
+  ],
+  "prefer_related_applications": false
+}

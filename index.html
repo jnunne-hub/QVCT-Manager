@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord QVCT</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Section d'Authentification -->
+    <div id="authContainer">
+    <div id="authLoader" class="auth-loader-initial">Chargement de l'application...</div>
+
+    <div id="loginScreen" style="display: none;" class="auth-page">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i data-feather="shield" class="auth-logo-icon"></i>
+                    <h1 class="auth-brand-title">CoPil <span class="brand-qvc">QVCT CRM59</span></h1>
+                </div>
+                <p class="auth-subtitle">Connectez-vous pour gérer la Qualité de Vie et Conditions de Travail.</p>
+            </div>
+
+            <div class="auth-form">
+                <button class="btn btn-google" id="loginBtn">
+                    <svg class="google-icon" viewBox="0 0 24 24" width="20px" height="20px" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                    Se connecter avec Google
+                </button>
+                <p id="authErrorMessage" class="auth-message"></p>
+            </div>
+
+            <div class="auth-footer">
+                <p>© <span id="currentYear"></span> CoPil QVCT. Tous droits réservés.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="unauthorizedScreen" style="display: none;" class="auth-page">
+        <div class="auth-card">
+           
+            <h1 class="auth-brand-title">Accès Refusé</h1>
+            <p class="auth-message">Votre compte n'est pas autorisé à accéder à cette application.</p>
+            <button class="btn" id="logoutUnauthorizedBtn" style="margin-top: 20px;"><i data-feather="log-out"></i> Se déconnecter</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Conteneur pour l'Application -->
+    <div id="appShell" style="display: none;">
+        <!-- Contenu (header, main, pages) injecté par script.js -->
+    </div>
+
+    <!-- Templates pour les Modals -->
+    <template id="animationModalTemplate">
+        <div class="modal-backdrop" id="addAnimationModal">
+            <div class="modal">
+                <div class="modal-header"><h2 class="modal-title">Nouvelle animation</h2><button class="modal-close"><i data-feather="x"></i></button></div>
+                <div class="modal-body">
+                    <div class="form-group"><label class="form-label" for="animationTitle">Titre</label><input type="text" class="form-control" id="animationTitle"></div>
+                    <div class="form-group"><label class="form-label" for="animationDescription">Description</label><textarea class="form-control" id="animationDescription" rows="3"></textarea></div>
+                    <div class="form-group"><label class="form-label" for="animationDate">Date</label><input type="date" class="form-control" id="animationDate"></div>
+                    <div class="form-group"><label class="form-label" for="animationLocation">Lieu</label><input type="text" class="form-control" id="animationLocation"></div>
+                    <div class="form-group"><label class="form-label" for="animationType">Type</label><select class="form-control form-select" id="animationType"><option value="Événement">Événement</option><option value="Atelier">Atelier</option><option value="Réunion">Réunion</option><option value="Autre">Autre</option></select></div>
+                    <div class="form-group"><label class="form-label" for="animationImageUpload">Affiche</label><input type="file" class="form-control" id="animationImageUpload" accept="image/*"><div id="imagePreviewContainer" style="margin-top:10px;"><img id="animationImagePreview" src="#" alt="Aperçu" style="max-width:100%;max-height:150px;display:none;"></div></div>
+                    <div class="form-group"><label class="form-label" for="animationPosterUrl">OU URL Affiche</label><input type="url" class="form-control" id="animationPosterUrl"></div>
+                    <div class="form-group"><label class="form-label" for="animationResponsibleMembers">Membres</label><select class="form-control form-select" id="animationResponsibleMembers" multiple></select></div>
+                    <div class="form-group">
+                        <label class="form-label" for="animationDocumentUrl">Lien du Document Attaché (ex: Drive)</label>
+                        <input type="url" class="form-control" id="animationDocumentUrl" placeholder="https://docs.google.com/document/d/...">
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline modal-cancel-btn">Annuler</button><button class="btn modal-save-btn" id="saveAnimationBtn">Enregistrer</button></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="memberModalTemplate">
+        <div class="modal-backdrop" id="addMemberModal">
+            <div class="modal">
+                <div class="modal-header"><h2 class="modal-title">Nouveau membre</h2><button class="modal-close"><i data-feather="x"></i></button></div>
+                <div class="modal-body">
+                     <div class="form-group"><label class="form-label" for="memberFirstName">Prénom</label><input type="text" class="form-control" id="memberFirstName"></div>
+                     <div class="form-group"><label class="form-label" for="memberLastName">Nom</label><input type="text" class="form-control" id="memberLastName"></div>
+                     <div class="form-group"><label class="form-label" for="memberRole">Fonction</label><input type="text" class="form-control" id="memberRole"></div>
+                     <div class="form-group"><label class="form-label" for="memberEmail">Email (contact)</label><input type="email" class="form-control" id="memberEmail"></div>
+                     <div class="form-group"><label class="form-label" for="memberAvatarUrl">URL Avatar</label><input type="url" class="form-control" id="memberAvatarUrl"></div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline modal-cancel-btn">Annuler</button><button class="btn modal-save-btn" id="saveMemberBtn">Enregistrer</button></div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="taskModalTemplate">
+        <div class="modal-backdrop" id="addTaskModal">
+            <div class="modal">
+                <div class="modal-header"><h2 class="modal-title">Nouvelle tâche</h2><button class="modal-close"><i data-feather="x"></i></button></div>
+                <div class="modal-body">
+                    <div class="form-group"><label class="form-label" for="taskTitle">Titre</label><input type="text" class="form-control" id="taskTitle"></div>
+                    <div class="form-group"><label class="form-label" for="taskDescription">Description</label><textarea class="form-control" id="taskDescription" rows="2"></textarea></div>
+                    <div class="form-group"><label class="form-label" for="taskAnimationLink">Animation</label><select class="form-control form-select" id="taskAnimationLink"></select></div>
+                    <div class="form-group"><label class="form-label" for="taskAssignedMembers">Membres assignés</label><select class="form-control form-select" id="taskAssignedMembers" multiple></select></div>
+                    <div class="form-group"><label class="form-label" for="taskBudgetSpent">Budget (€)</label><input type="number" class="form-control" id="taskBudgetSpent" placeholder="0"></div>
+                    <div class="form-group"><label class="form-label" for="taskStatus">Statut</label><select class="form-control form-select" id="taskStatus"><option value="todo">À faire</option><option value="pending">En cours</option><option value="completed">Terminé</option></select></div>
+                    <div class="form-group"><label class="form-label" for="taskDueDate">Échéance</label><input type="date" class="form-control" id="taskDueDate"></div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline modal-cancel-btn">Annuler</button><button class="btn modal-save-btn" id="saveTaskBtn">Enregistrer Tâche</button></div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="auth.js"></script>
+    <script type="module" src="script.js"></script>
+    <div id="pdfSpinnerOverlay" class="pdf-spinner-overlay" style="display: none;">
+        <div class="pdf-spinner"></div>
+        <p>Génération du PDF en cours...</p>
+    </div>
+</body>
+</html>
