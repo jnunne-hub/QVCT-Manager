@@ -19,12 +19,12 @@ import { openModal as commonOpenModal, closeModal as commonCloseModal } from './
 
 let dbInstance = null;
 // Cache global pour les détails des membres pour éviter les requêtes répétées
-const membersCache = {}; // Initialiser le cache
+const membersCache = {};
 
 export function initializeTasksModule(firestoreInstance) {
     dbInstance = firestoreInstance;
     if (dbInstance) {
-        console.log("Tasks module initialized with Firestore instance. Project ID from instance:", dbInstance.app.options.projectId);
+        // console.log("Tasks module initialized with Firestore instance. Project ID:", dbInstance.app.options.projectId);
     } else {
         console.error("Tasks module: Firestore instance IS NULL upon initialization!");
     }
@@ -34,127 +34,99 @@ const pageTasksListContainer = () => document.getElementById('allTasksListContai
 const taskModalElement = () => document.getElementById('addTaskModal');
 
 export async function getAllTasks() {
-    console.log("%cgetAllTasks: Function called", "color: blue; font-weight: bold;");
-    if (!dbInstance) {
-        console.error("getAllTasks: Firestore instance (dbInstance) is NULL or undefined. Cannot proceed.");
-        return [];
-    }
-    // console.log("getAllTasks: dbInstance seems OK. Project ID:", dbInstance.app.options.projectId);
+    // console.log("%cgetAllTasks: Function called", "color: blue; font-weight: bold;");
+    if (!dbInstance) { console.error("getAllTasks: Firestore instance is NULL."); return []; }
 
     try {
-        const collectionName = "tasks";
-        // console.log(`getAllTasks: Preparing to query collection '${collectionName}'.`);
-        const tasksColRef = collection(dbInstance, collectionName);
-        // console.log(`getAllTasks: Collection reference created for '${collectionName}'. Path: ${tasksColRef.path}`);
-
-        const sortField = "createdAt";
-        const sortDirection = "desc";
-        const q = query(tasksColRef, orderBy(sortField, sortDirection));
-        // console.log(`getAllTasks: Querying WITH orderBy('${sortField}', '${sortDirection}').`);
-
-        // console.log("getAllTasks: Attempting to execute getDocs(q)...");
+        const tasksColRef = collection(dbInstance, "tasks");
+        const q = query(tasksColRef, orderBy("createdAt", "desc"));
         const taskSnapshot = await getDocs(q);
-        // console.log("getAllTasks: getDocs(q) executed.");
-
-        // console.log(`getAllTasks: Snapshot size: ${taskSnapshot.size}`);
-        if (taskSnapshot.empty) {
-            // console.warn(`getAllTasks: No documents found in '${collectionName}'.`);
-        }
-
         const tasks = [];
-        taskSnapshot.forEach(docSnap => {
-            tasks.push({ id: docSnap.id, ...docSnap.data() });
-        });
-
+        taskSnapshot.forEach(docSnap => tasks.push({ id: docSnap.id, ...docSnap.data() }));
         // console.log(`getAllTasks: Mapped ${tasks.length} tasks.`);
         return tasks;
     } catch (error) {
-        console.error("getAllTasks: Error during query execution or processing:", error);
-        if (error.code === 'failed-precondition') {
-            console.error(`Firestore Error (failed-precondition): The query requires an index. Check Firebase console.`);
-            alert(`Erreur Firestore : La requête sur 'tasks' nécessite un index (probablement pour le tri sur 'createdAt').`);
-        } else {
-            alert("Erreur lors de la récupération de toutes les tâches.");
-        }
+        console.error("getAllTasks: Error:", error);
+        if (error.code === 'failed-precondition') alert(`Erreur Firestore (tasks): Index manquant pour le tri sur 'createdAt'.`);
+        else alert("Erreur récupération de toutes les tâches.");
         return [];
     }
 }
 
 export async function loadTasksForPage(filters = {}) {
-    // console.log("%cloadTasksForPage: Function called", "color: blue; font-weight: bold;", "Filters:", JSON.stringify(filters));
+    // console.log("%cloadTasksForPage: Called", "color: blue; font-weight: bold;", "Filters:", JSON.stringify(filters));
     if (!dbInstance) { console.error("loadTasksForPage: Firestore instance is NULL."); return; }
     const container = pageTasksListContainer();
     if (!container) { console.warn("loadTasksForPage: Container #allTasksListContainer not found."); return; }
-
     container.innerHTML = '<p>Chargement des tâches...</p>';
 
     try {
         let taskList = [];
         const hasActiveFilters = Object.values(filters).some(f => f !== "" && f !== null && f !== undefined && (Array.isArray(f) ? f.length > 0 : true));
-        // console.log("loadTasksForPage: Has active filters:", hasActiveFilters);
+        const tasksColRef = collection(dbInstance, "tasks");
+        let q;
 
         if (hasActiveFilters) {
-            // console.log("loadTasksForPage: Applying filters. Constructing query...");
-            const collectionName = "tasks";
             let qConstraints = [];
-
             if (filters.status) qConstraints.push(where("status", "==", filters.status));
             if (filters.animationId) qConstraints.push(where("animationId", "==", filters.animationId));
             if (filters.assigneeId) qConstraints.push(where("assigneeIds", "array-contains", filters.assigneeId));
-            
-            qConstraints.push(orderBy("createdAt", "desc")); // Toujours trier
-
-            const tasksColRef = collection(dbInstance, collectionName);
-            const q = query(tasksColRef, ...qConstraints);
-            
-            const filteredSnapshot = await getDocs(q);
-            filteredSnapshot.forEach(docSnap => taskList.push({ id: docSnap.id, ...docSnap.data() }));
-            // console.log(`loadTasksForPage: Mapped ${taskList.length} tasks after filtering.`);
+            qConstraints.push(orderBy("createdAt", "desc"));
+            q = query(tasksColRef, ...qConstraints);
         } else {
-            // console.log("loadTasksForPage: No active filters, calling getAllTasks().");
-            taskList = await getAllTasks();
+            q = query(tasksColRef, orderBy("createdAt", "desc")); // Si pas de filtre, getAllTasks est plus simple mais refait une requête
+            // Pour optimiser, si script.js a déjà allRawTasksDataGlobal, on pourrait filtrer ça.
+            // Mais pour l'instant, on refait une requête pour la simplicité de la logique ici.
         }
-
-        // console.log(`loadTasksForPage: Final task list to display (length: ${taskList.length}).`);
+        
+        const snapshot = await getDocs(q);
+        snapshot.forEach(docSnap => taskList.push({ id: docSnap.id, ...docSnap.data() }));
         await displayTasks(taskList, container);
-
     } catch (error) {
-        console.error("loadTasksForPage: Error during query execution or processing:", error);
+        console.error("loadTasksForPage: Error:", error);
         if (container) container.innerHTML = `<p class="error-message">Erreur chargement tâches: ${error.message}.</p>`;
+    }
+}
+
+export async function loadTasksForAnimation(animationId) { // EXPORTÉE pour animations.js
+    // console.log(`%cloadTasksForAnimation: Called for animationId: ${animationId}`, "color: blueviolet; font-weight: bold;");
+    if (!dbInstance) { console.error("loadTasksForAnimation: Firestore instance is NULL."); return []; }
+    if (!animationId) { console.warn("loadTasksForAnimation: animationId is undefined or empty."); return []; }
+
+    try {
+        const tasksColRef = collection(dbInstance, "tasks");
+        const q = query(tasksColRef, where("animationId", "==", animationId), orderBy("createdAt", "desc"));
+        const tasksSnapshot = await getDocs(q);
+        const tasks = [];
+        tasksSnapshot.forEach(docSnap => tasks.push({ id: docSnap.id, ...docSnap.data() }));
+        // console.log(`loadTasksForAnimation: Found ${tasks.length} tasks for animationId '${animationId}'.`);
+        return tasks;
+    } catch (error) {
+        console.error(`loadTasksForAnimation: Error for animationId '${animationId}':`, error);
+        if (error.code === 'failed-precondition') alert(`Erreur Firestore: Index manquant pour les tâches d'animation.`);
+        return [];
     }
 }
 
 async function getAssigneeDetails(assigneeIds) {
     if (!dbInstance || !assigneeIds || assigneeIds.length === 0) return [];
-    
-    const uniqueAssigneeIds = [...new Set(assigneeIds)]; // Assurer l'unicité pour les requêtes
+    const uniqueAssigneeIds = [...new Set(assigneeIds.filter(id => id))]; // Filtrer les IDs vides/nuls avant Set
     const detailsToReturn = [];
-    const idsToFetchFromDB = [];
-
-    // Vérifier le cache pour chaque ID unique
-    uniqueAssigneeIds.forEach(id => {
-        if (membersCache[id]) {
-            // Ne pas ajouter directement ici pour conserver l'ordre de assigneeIds si besoin plus tard,
-            // mais on pourrait optimiser si l'ordre n'importe pas pour l'affichage des avatars groupés.
-        } else {
-            idsToFetchFromDB.push(id);
-        }
-    });
+    const idsToFetchFromDB = uniqueAssigneeIds.filter(id => !membersCache[id]);
 
     if (idsToFetchFromDB.length > 0) {
-        console.log("getAssigneeDetails: Fetching details from DB for member IDs:", idsToFetchFromDB);
+        // console.log("getAssigneeDetails: Fetching from DB for member IDs:", idsToFetchFromDB);
         const memberPromises = idsToFetchFromDB.map(memberId =>
             getDoc(doc(dbInstance, "members", memberId)).then(memberSnap => {
                 if (memberSnap.exists()) {
                     const memberData = memberSnap.data();
-                    membersCache[memberId] = { // Mettre en cache
+                    membersCache[memberId] = {
                         id: memberId,
                         name: `${memberData.firstname || ''} ${memberData.lastname || ''}`.trim() || "Membre Anonyme",
                         initials: `${memberData.firstname ? memberData.firstname[0] : ''}${memberData.lastname ? memberData.lastname[0] : ''}`.toUpperCase() || '??',
                         avatarUrl: memberData.avatarUrl || null
                     };
                 } else {
-                    console.warn(`getAssigneeDetails: Member ID ${memberId} not found.`);
                     membersCache[memberId] = { id: memberId, name: "Membre Supprimé", initials: "XX", avatarUrl: null };
                 }
             }).catch(error => {
@@ -164,21 +136,12 @@ async function getAssigneeDetails(assigneeIds) {
         );
         await Promise.all(memberPromises);
     }
-
-    // Construire le tableau de retour en utilisant le cache et l'ordre original des assigneeIds de la tâche
-    assigneeIds.forEach(id => {
-        if (membersCache[id]) {
-            detailsToReturn.push(membersCache[id]);
-        }
-        // Si un ID n'est pas dans le cache ici, c'est qu'il n'a pas été trouvé ou a causé une erreur,
-        // et membersCache[id] contiendrait l'info "Membre Supprimé" ou "Erreur Membre".
-    });
+    assigneeIds.forEach(id => { if (id && membersCache[id]) detailsToReturn.push(membersCache[id]); });
     return detailsToReturn;
 }
 
-
-async function displayTasks(tasks, containerElement) {
-    // console.log("%cdisplayTasks: Function called", "color: green; font-weight: bold;", "Tasks received (length):", tasks ? tasks.length : 'null/undefined');
+export async function displayTasks(tasks, containerElement) { // EXPORTÉE pour animations.js (via alias)
+    // console.log("%cdisplayTasks: Function called", "color: green; font-weight: bold;", "Tasks count:", tasks ? tasks.length : 0);
     if (!containerElement) { console.warn("displayTasks: No container element."); return; }
     containerElement.innerHTML = '';
     if (!tasks || tasks.length === 0) { containerElement.innerHTML = '<p>Aucune tâche à afficher.</p>'; return; }
@@ -194,27 +157,23 @@ async function displayTasks(tasks, containerElement) {
         await Promise.all(animPromises);
     }
 
-    // Pré-charger les détails de TOUS les membres assignés pour toutes les tâches affichées
     const allUniqueAssigneeIdsInView = new Set();
     tasks.forEach(task => {
         if (task.assigneeIds && Array.isArray(task.assigneeIds)) {
-            task.assigneeIds.forEach(id => { if(id) allUniqueAssigneeIdsInView.add(id); });
+            task.assigneeIds.forEach(id => { if (id) allUniqueAssigneeIdsInView.add(id); });
         }
     });
     if (allUniqueAssigneeIdsInView.size > 0) {
-        // console.log("displayTasks: Pre-fetching details for all unique assignee IDs:", Array.from(allUniqueAssigneeIdsInView));
-        await getAssigneeDetails(Array.from(allUniqueAssigneeIdsInView)); // Peuple/met à jour membersCache
+        await getAssigneeDetails(Array.from(allUniqueAssigneeIdsInView));
     }
 
     tasks.forEach((task) => {
         const card = document.createElement('div');
         card.classList.add('task-card', task.status || 'todo');
         card.dataset.id = task.id;
-
         let dueDateDisplay = "Pas d'échéance";
         if (task.dueDate && typeof task.dueDate.toDate === 'function') { try { dueDateDisplay = task.dueDate.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { dueDateDisplay = "Date invalide";}}
         else if (task.dueDate) { try { const d = new Date(task.dueDate); if(!isNaN(d.getTime())) dueDateDisplay = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); else dueDateDisplay = String(task.dueDate).substring(0,10);} catch(e){dueDateDisplay = "Date erronée";}}
-        
         const animationTitle = task.animationId ? (animationTitlesCache[task.animationId] || "...") : "Non liée";
         let statusIcon = "circle"; let statusText = "À faire"; let taskEffectiveStatus = task.status || 'todo';
         switch (taskEffectiveStatus) { case "pending": statusIcon = "clock"; statusText = "En cours"; break; case "completed": statusIcon = "check-circle"; statusText = "Terminé"; break; }
@@ -223,11 +182,8 @@ async function displayTasks(tasks, containerElement) {
         if (task.assigneeIds && Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0) {
             const assigneeDetails = task.assigneeIds.map(id => membersCache[id]).filter(Boolean);
             if (assigneeDetails.length > 0) {
-                let tempHTML = '';
-                const maxAvatarsToShow = 3;
-                const namesList = [];
+                let tempHTML = ''; const maxAvatarsToShow = 3;
                 assigneeDetails.slice(0, maxAvatarsToShow).forEach(assignee => {
-                    namesList.push(assignee.name);
                     if (assignee.avatarUrl) tempHTML += `<img src="${assignee.avatarUrl}" alt="${assignee.name}" class="member-avatar-task" title="${assignee.name}">`;
                     else tempHTML += `<div class="member-avatar-task initials" title="${assignee.name}">${assignee.initials}</div>`;
                 });
@@ -235,7 +191,6 @@ async function displayTasks(tasks, containerElement) {
                 assigneesHTML = `<div class="task-assignees-container" title="Assigné à : ${assigneeDetails.map(a => a.name).join(', ')}">${tempHTML}</div>`;
             }
         }
-
         card.innerHTML = `
             <div class="task-status ${taskEffectiveStatus}"><i data-feather="${statusIcon}"></i></div>
             <div class="task-content">
@@ -246,25 +201,19 @@ async function displayTasks(tasks, containerElement) {
                     <div class="task-meta-item"><i data-feather="dollar-sign"></i> ${parseFloat(task.budget || 0).toFixed(2)}€</div>
                     <div class="task-meta-item"><i data-feather="info"></i> ${statusText}</div>
                 </div>
-                <div class="task-assignees">
-                    ${assigneesHTML}
-                </div>
+                <div class="task-assignees">${assigneesHTML}</div>
             </div>
             <div class="task-actions">
                 <button class="btn btn-icon btn-sm btn-outline btn-edit-task"><i data-feather="edit-2"></i></button>
                 <button class="btn btn-icon btn-sm btn-outline btn-delete-task"><i data-feather="trash-2"></i></button>
-            </div>
-        `;
+            </div>`;
         containerElement.appendChild(card);
     });
-
     if (typeof feather !== 'undefined') feather.replace();
     attachTaskActionListeners(containerElement);
-    // console.log("displayTasks: Finished rendering task cards.");
 }
 
 function attachTaskActionListeners(containerElement) {
-    // console.log("%cattachTaskActionListeners: Function called", "color: orange; font-weight: bold;");
     if (!containerElement) return;
     containerElement.querySelectorAll('.btn-edit-task').forEach(button => {
         const newButton = button.cloneNode(true); button.parentNode.replaceChild(newButton, button);
@@ -279,11 +228,9 @@ function attachTaskActionListeners(containerElement) {
             const card = e.target.closest('.task-card'); if (card?.dataset.id) handleDeleteTask(card.dataset.id);
         });
     });
-    // console.log("attachTaskActionListeners: Listeners attached.");
 }
 
 async function handleSaveTask(event, taskIdToUpdate = null) {
-    // console.log(`%chandleSaveTask: Called. ${taskIdToUpdate ? 'Updating task ID: ' + taskIdToUpdate : 'Adding new task.'}`, "color: purple; font-weight: bold;");
     event.preventDefault();
     if (!dbInstance) { console.error("handleSaveTask: DB instance is NULL."); return; }
     const modalElem = taskModalElement();
@@ -294,7 +241,7 @@ async function handleSaveTask(event, taskIdToUpdate = null) {
     const title = modalElem.querySelector('#taskTitle').value.trim();
     const description = modalElem.querySelector('#taskDescription').value.trim();
     const animationId = modalElem.querySelector('#taskAnimationLink').value;
-    const assigneeIds = Array.from(modalElem.querySelector('#taskAssignedMembers').selectedOptions).map(opt => opt.value).filter(Boolean); // Filtrer les valeurs vides
+    const assigneeIds = Array.from(modalElem.querySelector('#taskAssignedMembers').selectedOptions).map(opt => opt.value).filter(Boolean);
     const budget = parseFloat(modalElem.querySelector('#taskBudgetSpent').value) || 0;
     const status = modalElem.querySelector('#taskStatus').value;
     const dueDateStr = modalElem.querySelector('#taskDueDate').value;
@@ -313,7 +260,6 @@ async function handleSaveTask(event, taskIdToUpdate = null) {
 }
 
 async function handleEditTask(taskId) {
-    // console.log("%chandleEditTask: Called for task ID:", "color: purple; font-weight: bold;", taskId);
     if (!dbInstance || !taskId) return;
     const modalElem = commonOpenModal('addTaskModal', 'taskModalTemplate');
     if (!modalElem) return;
@@ -338,22 +284,20 @@ async function handleEditTask(taskId) {
 }
 
 async function handleDeleteTask(taskId) {
-    // console.log("%chandleDeleteTask: Called for task ID:", "color: red; font-weight: bold;", taskId);
     if (!dbInstance || !taskId || !confirm("Supprimer cette tâche ?")) return;
     try { await deleteDoc(doc(dbInstance, "tasks", taskId)); document.dispatchEvent(new CustomEvent('tasksUpdated'));
     } catch (error) { console.error("Error deleting task:", error); alert("Erreur suppression tâche."); }
 }
 
 export async function setupAddTaskModal() {
-    // console.log("%csetupAddTaskModal: Called", "color: purple; font-weight: bold;");
-    const modalElem = taskModalElement(); if (!modalElem || !modalElem.classList.contains('active')) return;
+    const modalElem = taskModalElement(); if (!modalElem || !modalElem.classList.contains('active')) {console.warn("Task modal not active for setup."); return;}
     modalElem.querySelector('.modal-title').textContent = 'Nouvelle tâche';
     const saveBtn = modalElem.querySelector('#saveTaskBtn'); saveBtn.textContent = 'Enregistrer Tâche';
     ['#taskTitle', '#taskDescription', '#taskBudgetSpent', '#taskDueDate', '#taskAnimationLink'].forEach(sel => { const el = modalElem.querySelector(sel); if (el) el.value = ''; });
     modalElem.querySelector('#taskStatus').value = 'todo';
     const memberSelect = modalElem.querySelector('#taskAssignedMembers'); if(memberSelect) Array.from(memberSelect.options).forEach(opt=>opt.selected=false);
     const animSelect = modalElem.querySelector('#taskAnimationLink');
-    if(animSelect) animSelect.innerHTML = ''; if(memberSelect) memberSelect.innerHTML = '';
+    if(animSelect) animSelect.innerHTML = ''; if(memberSelect) memberSelect.innerHTML = ''; // Vider avant de peupler
     await Promise.all([ populateAnimationsForSelect(animSelect), populateMembersForTaskSelect(memberSelect) ]);
     if(animSelect) animSelect.value = '';
     const newSaveBtn = saveBtn.cloneNode(true); saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
