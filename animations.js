@@ -192,7 +192,7 @@ function displayAnimations(animations) {
         card.innerHTML = `
             <div class="animation-poster" 
                  ${anim.afficheUrl ? `data-zoomable-image="${anim.afficheUrl}" title="Agrandir l'affiche"` : ''} 
-                 style="${anim.afficheUrl ? 'cursor: zoom-in;' : ''} position: relative; height: 160px; /* Hauteur fixe pour le conteneur poster */ overflow: hidden;"> {/* Assurer que le contenu est bien dans le conteneur */}
+                 style="${anim.afficheUrl ? 'cursor: zoom-in;' : ''} position: relative; height: 160px; /* Hauteur fixe pour le conteneur poster */ overflow: hidden;">
                 ${posterContentHTML}
             </div>
 
