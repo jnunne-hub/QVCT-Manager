@@ -331,6 +331,18 @@ body.light-theme .pdf-spinner {
 .task-assignees .text-muted { /* Pour le message "Non assignée" */
     font-style: italic;
 }
+.modal.modal-lg {
+    max-width: 800px; /* Ou une autre largeur qui vous convient */
+}
+/* Assurer que la liste des tâches dans le modal est scrollable si elle est longue */
+#modalAnimationTasksListContainer {
+    max-height: 50vh; /* Exemple de hauteur max */
+    overflow-y: auto;
+}
+/* Styles pour les cartes de tâches à l'intérieur du modal (elles devraient hériter des styles .task-card) */
+#modalAnimationTasksListContainer .task-card {
+    margin-bottom: 10px; /* Un peu d'espace entre les tâches dans le modal */
+}
 /* --- Settings Page --- */
 .settings-section { background-color: var(--dark-card); border-radius: var(--border-radius); padding: 15px; box-shadow: var(--shadow); margin-bottom: 24px; }
 .settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color-dark); }
