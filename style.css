@@ -263,7 +263,59 @@ body.light-theme .pdf-spinner {
     width: 1em; /* Ajuster la taille de l'icône dans le bouton */
     height: 1em;
 }
+.image-modal-backdrop {
+    /* Peut hériter de .modal-backdrop ou avoir des styles spécifiques */
+    /* Pour un fond plus transparent si souhaité pour les images : */
+    /* background-color: rgba(0, 0, 0, 0.85); */
+    cursor: zoom-out; /* Indiquer qu'on peut cliquer pour fermer */
+}
 
+.image-zoom-modal-content {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Retirer max-width et max-height d'ici, ils seront sur l'image ou gérés par le backdrop */
+    /* max-width: 90vw; */ /* SUPPRIMER ou réduire */
+    /* max-height: 90vh; */ /* SUPPRIMER ou réduire */
+    width: auto;  /* S'adapte à la largeur de l'image */
+    height: auto; /* S'adapte à la hauteur de l'image */
+    max-width: calc(100vw - 40px); /* Laisse un peu de marge par rapport aux bords de la fenêtre */
+    max-height: calc(100vh - 40px);/* Laisse un peu de marge par rapport aux bords de la fenêtre */
+    overflow: hidden; /* Si l'image est plus grande que le viewport après max-width/height */
+}
+
+.image-zoom-modal-content img#zoomedImage { /* Cible l'image spécifique */
+    max-width: 100%; /* L'image prendra au max la largeur de son conteneur modal */
+    max-height: 100%;/* L'image prendra au max la hauteur de son conteneur modal */
+    /* Les max-width/max-height du parent .image-zoom-modal-content vont contraindre la taille globale */
+    display: block;
+    /* margin: auto; // Plus nécessaire si le parent est flex et centre */
+    object-fit: contain;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+.image-zoom-close-btn {
+    /* Styles déjà en ligne, mais peuvent être mis ici */
+    /* position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    border-radius: 50%;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center; */
+}
+.image-zoom-close-btn:hover {
+    background-color: rgba(0,0,0,0.7);
+}
 .member-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .member-card-avatar { width: 70px; height: 70px; border-radius: 50%; background-color: var(--sky-blue); color: var(--dark-bg); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600; margin-bottom: 10px; object-fit: cover; }
 .member-card-name { font-family: 'Poppins', sans-serif; font-size: var(--font-size-lg); margin-bottom: 4px; font-weight: 500; }
