@@ -174,16 +174,28 @@ function displayAnimations(animations) {
         }
 
         // Définir posterHTML APRÈS que dateDisplay soit défini
-        const posterImageHTML = `
-            <div class="animation-poster-image" style="background-image: url('${anim.afficheUrl || ''}'); background-color: ${anim.afficheUrl ? 'transparent' : 'var(--sage)'};">
+        const posterContentHTML = `
+            <div class="animation-poster-image" style="
+                background-image: url('${anim.afficheUrl || ''}'); 
+                background-color: ${anim.afficheUrl ? 'transparent' : 'var(--sage)'};
+                width: 100%; 
+                height: 100%; 
+                background-size: cover; 
+                background-position: center;
+                display: flex; /* Pour centrer l'icône placeholder si pas d'image */
+                align-items: center;
+                justify-content: center;">
                 ${!anim.afficheUrl ? '<i data-feather="image" style="width:48px; height:48px; color: rgba(255,255,255,0.7);"></i>' : ''}
             </div>
-            <div class="animation-date">${dateDisplay}</div>`; // dateDisplay est maintenant défini
+            <div class="animation-date">${dateDisplay}</div>`;
 
         card.innerHTML = `
-            <div class="animation-poster" ${anim.afficheUrl ? `data-zoomable-image="${anim.afficheUrl}" title="Agrandir l'affiche"` : ''} style="${anim.afficheUrl ? 'cursor: zoom-in;' : ''}">
-                ${posterImageHTML}
+            <div class="animation-poster" 
+                 ${anim.afficheUrl ? `data-zoomable-image="${anim.afficheUrl}" title="Agrandir l'affiche"` : ''} 
+                 style="${anim.afficheUrl ? 'cursor: zoom-in;' : ''} position: relative; height: 160px; /* Hauteur fixe pour le conteneur poster */ overflow: hidden;"> {/* Assurer que le contenu est bien dans le conteneur */}
+                ${posterContentHTML}
             </div>
+
             <div class="animation-content">
                 <h3 class="animation-title">${anim.title || 'Animation Sans Titre'}</h3>
                 <div class="animation-meta">
