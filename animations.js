@@ -129,6 +129,8 @@ async function getParticipantNames(participantIds) {
     return names;
 }
 
+// Dans animations.js
+
 function displayAnimations(animations) {
     const gridContainer = animationsGridContainer();
     if (!gridContainer) return;
@@ -139,21 +141,48 @@ function displayAnimations(animations) {
         const card = document.createElement('div');
         card.classList.add('animation-card');
         card.dataset.id = anim.id;
+
         let dateDisplay = "Date non spécifiée";
-        if (anim.dateTime && typeof anim.dateTime.toDate === 'function') { try { dateDisplay = anim.dateTime.toDate().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }); } catch (e) { console.error("Erreur format date:", anim.title, e); }}
+        if (anim.dateTime && typeof anim.dateTime.toDate === 'function') {
+            try {
+                dateDisplay = anim.dateTime.toDate().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch (e) { console.error("Erreur format date:", anim.title, e); }
+        }
+
         let membersAvatarsHTML = '';
         if (anim.participantNames && anim.participantNames.length > 0) {
             const maxAvatarsToShow = 2;
-            anim.participantNames.slice(0, maxAvatarsToShow).forEach(name => { const initials = name.split(' ').map(n => n[0]).join('').toUpperCase() || '?'; membersAvatarsHTML += `<div class="member-avatar" title="${name}">${initials}</div>`; });
-            if (anim.participantNames.length > maxAvatarsToShow) membersAvatarsHTML += `<div class="member-avatar">+${anim.participantNames.length - maxAvatarsToShow}</div>`;
-        } else { membersAvatarsHTML = '<span class="text-muted" style="font-size:0.8em;">Aucun responsable</span>'; }
+            anim.participantNames.slice(0, maxAvatarsToShow).forEach(name => {
+                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+                membersAvatarsHTML += `<div class="member-avatar" title="${name}">${initials}</div>`;
+            });
+            if (anim.participantNames.length > maxAvatarsToShow) {
+                membersAvatarsHTML += `<div class="member-avatar">+${anim.participantNames.length - maxAvatarsToShow}</div>`;
+            }
+        } else {
+            membersAvatarsHTML = '<span class="text-muted" style="font-size:0.8em;">Aucun responsable</span>';
+        }
+
         let documentButtonHTML = '';
-        if (anim.documentUrl) { try { new URL(anim.documentUrl); documentButtonHTML = `<a href="${anim.documentUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline btn-document" style="margin-top: 10px; display: inline-flex; align-items: center;"><i data-feather="file-text" style="margin-right: 5px;"></i> Voir Document</a>`; } catch (e) { documentButtonHTML = `<span class="text-muted" style="font-size:0.8em; margin-top:10px; display:block;">Lien doc. invalide</span>`; }}
+        if (anim.documentUrl) {
+            try {
+                new URL(anim.documentUrl);
+                documentButtonHTML = `<a href="${anim.documentUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline btn-document" style="margin-top: 10px; display: inline-flex; align-items: center;"><i data-feather="file-text" style="margin-right: 5px;"></i> Voir Document</a>`;
+            } catch (e) {
+                documentButtonHTML = `<span class="text-muted" style="font-size:0.8em; margin-top:10px; display:block;">Lien doc. invalide</span>`;
+            }
+        }
+
+        // Définir posterHTML APRÈS que dateDisplay soit défini
+        const posterImageHTML = `
+            <div class="animation-poster-image" style="background-image: url('${anim.afficheUrl || ''}'); background-color: ${anim.afficheUrl ? 'transparent' : 'var(--sage)'};">
+                ${!anim.afficheUrl ? '<i data-feather="image" style="width:48px; height:48px; color: rgba(255,255,255,0.7);"></i>' : ''}
+            </div>
+            <div class="animation-date">${dateDisplay}</div>`; // dateDisplay est maintenant défini
 
         card.innerHTML = `
-            <div class="animation-poster" style="background-image: url('${anim.afficheUrl || ''}'); background-color: ${anim.afficheUrl ? 'transparent' : 'var(--sage)'};">
-                ${!anim.afficheUrl ? '<i data-feather="image" style="width:48px; height:48px; color: rgba(255,255,255,0.7);"></i>' : ''}
-                <div class="animation-date">${dateDisplay}</div>
+            <div class="animation-poster" ${anim.afficheUrl ? `data-zoomable-image="${anim.afficheUrl}" title="Agrandir l'affiche"` : ''} style="${anim.afficheUrl ? 'cursor: zoom-in;' : ''}">
+                ${posterImageHTML}
             </div>
             <div class="animation-content">
                 <h3 class="animation-title">${anim.title || 'Animation Sans Titre'}</h3>
@@ -171,13 +200,35 @@ function displayAnimations(animations) {
                     <button class="btn btn-sm btn-outline btn-edit-animation"><i data-feather="edit-2"></i> Modifier</button>
                     <button class="btn btn-sm btn-outline btn-delete-animation" style="color: var(--danger); border-color: var(--danger);"><i data-feather="trash-2"></i> Supprimer</button>
                 </div>
-            </div>`;
+            </div>
+        `;
         gridContainer.appendChild(card);
     });
     if (typeof feather !== 'undefined') feather.replace();
     attachAnimationActionListeners();
 }
+function handleZoomImage(imageUrl) {
+    console.log("Zooming image:", imageUrl);
+    const modalElement = commonOpenModal('imageZoomModal', 'imageModalTemplate');
+    if (!modalElement) {
+        console.error("Failed to open image zoom modal.");
+        return;
+    }
 
+    const zoomedImageElement = modalElement.querySelector('#zoomedImage');
+    if (zoomedImageElement) {
+        zoomedImageElement.src = imageUrl;
+    }
+
+    // Le bouton de fermeture est déjà géré par la logique de commonOpenModal s'il a la classe .modal-close
+    // Mais on peut ajouter un listener spécifique pour le backdrop ici si on veut
+    // modalElement.addEventListener('click', (event) => {
+    //     if (event.target === modalElement) { // Si on clique sur le fond du modal (backdrop)
+    //         commonCloseModal('imageZoomModal');
+    //     }
+    // });
+    // Le bouton de fermeture spécifique .image-zoom-close-btn est géré par commonOpenModal car il a .modal-close
+}
 function attachAnimationActionListeners() {
     const container = animationsGridContainer(); if (!container) return;
     container.querySelectorAll('.btn-edit-animation').forEach(button => {
@@ -195,6 +246,21 @@ function attachAnimationActionListeners() {
             const animationId = card?.dataset.id;
             const animationTitle = card?.querySelector('.animation-title')?.textContent || "Animation";
             if (animationId) await handleShowAnimationTasks(animationId, animationTitle);
+        });
+    });
+    container.querySelectorAll('.animation-poster[data-zoomable-image]').forEach(poster => {
+        const newPoster = poster.cloneNode(true); // Éviter listeners dupliqués
+        poster.parentNode.replaceChild(newPoster, poster);
+
+        newPoster.addEventListener('click', (e) => {
+            // S'assurer qu'on ne clique pas sur un bouton à l'intérieur du poster (ex: date)
+            // Bien que la date soit généralement superposée et ne devrait pas intercepter le clic sur le poster lui-même.
+            // if (e.target !== newPoster && !newPoster.contains(e.target)) return; // Optionnel, si la date était un bouton
+
+            const imageUrl = newPoster.dataset.zoomableImage;
+            if (imageUrl) {
+                handleZoomImage(imageUrl);
+            }
         });
     });
 }
