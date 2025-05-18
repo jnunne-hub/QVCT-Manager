@@ -182,7 +182,7 @@ function renderAppShellDOM(user) {
         </main>
         <footer>
             <div class="container">
-                <p>© 2025 - QVCT CRM59. Tous droits réservés.</p>
+                <p>© 2025 - QVCT Dashboard CRM59 (v3). Tous droits réservés.</p>
             </div>
         </footer>
     `;
