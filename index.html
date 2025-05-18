@@ -117,7 +117,26 @@
             </div>
         </div>
     </template>
-
+<template id="animationTasksModalTemplate">
+    <div class="modal-backdrop" id="animationTasksModal">
+        <div class="modal modal-lg"> 
+            <div class="modal-header">
+                <h2 class="modal-title">Tâches pour : <span id="modalAnimationTitle">Animation</span></h2>
+                <button class="modal-close"><i data-feather="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalAnimationTasksListContainer" class="tasks-list">
+                   
+                    <p>Chargement des tâches...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline modal-cancel-btn">Fermer</button>
+               
+            </div>
+        </div>
+    </div>
+</template>
     <script type="module" src="auth.js"></script>
     <script type="module" src="script.js"></script>
     <div id="pdfSpinnerOverlay" class="pdf-spinner-overlay" style="display: none;">
