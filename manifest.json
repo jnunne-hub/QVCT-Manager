@@ -3,7 +3,7 @@
   "short_name": "CoPil QVCT",
   "description": "Tableau de bord pour la gestion de la Qualité de Vie et Conditions de Travail.",
   "lang": "fr-FR",
-  "start_url": "/",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1E2030",
   "theme_color": "#2A2D43",
