@@ -137,6 +137,17 @@
         </div>
     </div>
 </template>
+<template id="imageModalTemplate">
+    <div class="modal-backdrop image-modal-backdrop" id="imageZoomModal" style="--modal-bg: transparent; --modal-shadow: none;"> {/* Styles pour un fond transparent */}
+        <div class="modal image-zoom-modal-content" style="background-color: transparent; box-shadow: none; max-width: 90vw; max-height: 90vh;">
+            {/* Le bouton close est placé à l'extérieur pour être plus accessible sur l'image */}
+            <button class="modal-close image-zoom-close-btn" style="position: absolute; top: 15px; right: 15px; background-color: rgba(0,0,0,0.5); color: white; border-radius: 50%; z-index:10;">
+                <i data-feather="x"></i>
+            </button>
+            <img id="zoomedImage" src="#" alt="Aperçu agrandi" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">
+        </div>
+    </div>
+</template>
     <script type="module" src="auth.js"></script>
     <script type="module" src="script.js"></script>
     <div id="pdfSpinnerOverlay" class="pdf-spinner-overlay" style="display: none;">
